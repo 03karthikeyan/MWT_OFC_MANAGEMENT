@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "481273410837",
+    "project_id": "push-notification-7d744",
+    "storage_bucket": "push-notification-7d744.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:481273410837:android:f544acf0ce4b94bb17651c",
+        "android_client_info": {
+          "package_name": "com.mediawave.hrms_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD35keEHQwdJBLb_5P58IcRglLaetmvwmE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
