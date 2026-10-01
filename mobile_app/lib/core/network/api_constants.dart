@@ -32,6 +32,9 @@ class ApiConstants {
   static const String allAttendance = '/api/attendance/all';
   static const String todayAttendance = '/api/attendance/today';
   static const String attendanceSummary = '/api/attendance/summary';
+  static String employeeSummary(String userId) => '/api/attendance/employee-summary/$userId';
+  static String manualCheckout(String id) => '/api/attendance/manual-checkout/$id';
+  static const String adminRegularizeAttendance = '/api/attendance/admin-regularize';
 
   // Work endpoints
   static const String work = '/api/work';

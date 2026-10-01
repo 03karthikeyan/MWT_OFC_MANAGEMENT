@@ -13,6 +13,7 @@ class AppTextField extends StatefulWidget {
   final IconData? prefixIcon;
   final bool readOnly;
   final VoidCallback? onTap;
+  final ValueChanged<String>? onChanged;
 
   const AppTextField({
     super.key,
@@ -25,6 +26,7 @@ class AppTextField extends StatefulWidget {
     this.prefixIcon,
     this.readOnly = false,
     this.onTap,
+    this.onChanged,
   });
 
   @override
@@ -54,6 +56,7 @@ class _AppTextFieldState extends State<AppTextField> {
           validator: widget.validator,
           readOnly: widget.readOnly,
           onTap: widget.onTap,
+          onChanged: widget.onChanged,
           decoration: InputDecoration(
             hintText: widget.hint,
             prefixIcon: widget.prefixIcon != null ? Icon(widget.prefixIcon, color: AppTheme.textLight) : null,

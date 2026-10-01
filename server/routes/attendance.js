@@ -166,14 +166,104 @@ router.get('/all', adminAuth, async (req, res) => {
   }
 });
 
-// Get summary for calendar
-router.get('/summary', auth, async (req, res) => {
+// Admin: Manual Checkout / Regularize Attendance Record
+router.put('/manual-checkout/:id', adminAuth, async (req, res) => {
   try {
-    const { month, year, userId } = req.query;
-    const targetUserId = req.user.role === 'admin' ? userId : req.user._id;
+    const { checkOut, workHours, status, reason } = req.body;
+    const attendance = await Attendance.findById(req.params.id);
+    if (!attendance) {
+      return res.status(404).json({ message: 'Attendance record not found' });
+    }
 
-    if (req.user.role !== 'admin' && userId && userId !== req.user._id.toString()) {
+    const checkOutDate = checkOut ? new Date(checkOut) : new Date();
+    attendance.checkOut = checkOutDate;
+    attendance.isManualCheckout = true;
+    attendance.manualCheckoutReason = reason || 'Manual Admin Checkout';
+
+    if (workHours !== undefined) {
+      attendance.workHours = parseFloat(workHours);
+    } else if (attendance.checkIn) {
+      const diffMs = checkOutDate - new Date(attendance.checkIn);
+      attendance.workHours = parseFloat((diffMs / (1000 * 60 * 60)).toFixed(2));
+    } else {
+      attendance.workHours = 8.0;
+    }
+
+    attendance.status = status || (attendance.workHours >= 6.0 ? 'present' : 'half-day');
+    await attendance.save();
+
+    const populated = await Attendance.findById(attendance._id)
+      .populate('userId', 'name username employeeId jobRole profilePicture');
+
+    getIO().to(attendance.userId.toString()).emit('attendance:update', populated);
+
+    sendNotification({
+      recipientId: attendance.userId,
+      title: '📋 Attendance Regularized',
+      message: `Your attendance for ${new Date(attendance.date).toLocaleDateString()} was regularized by Admin (${attendance.status.toUpperCase()}, ${attendance.workHours} hrs).`,
+      data: { type: 'attendance' },
+    });
+
+    res.json({ message: 'Attendance regularized successfully', attendance: populated });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+});
+
+// Admin: Create or Regularize an Attendance record for an Employee on any date
+router.post('/admin-regularize', adminAuth, async (req, res) => {
+  try {
+    const { userId, date, checkIn, checkOut, workHours, status, reason } = req.body;
+    if (!userId || !date) {
+      return res.status(400).json({ message: 'User ID and Date are required' });
+    }
+
+    const targetDate = new Date(date);
+    const dayStart = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+
+    let attendance = await Attendance.findOne({ userId, date: dayStart });
+    if (!attendance) {
+      attendance = new Attendance({
+        userId,
+        date: dayStart,
+      });
+    }
+
+    if (checkIn) attendance.checkIn = new Date(checkIn);
+    if (checkOut) attendance.checkOut = new Date(checkOut);
+    attendance.workHours = workHours !== undefined ? parseFloat(workHours) : 8.0;
+    attendance.status = status || 'present';
+    attendance.isManualCheckout = true;
+    attendance.manualCheckoutReason = reason || 'Admin Regularization';
+
+    await attendance.save();
+
+    const populated = await Attendance.findById(attendance._id)
+      .populate('userId', 'name username employeeId jobRole profilePicture');
+
+    res.json({ message: 'Attendance created/regularized successfully', attendance: populated });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+});
+
+// Detailed Employee Attendance & Leaves Summary (for Employee Details screen in Admin Directory)
+router.get('/employee-summary/:userId', auth, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { month, year } = req.query;
+
+    if (req.user.role !== 'admin' && req.user._id.toString() !== userId) {
       return res.status(403).json({ message: 'Unauthorized' });
+    }
+
+    const User = require('../models/User');
+    const Leave = require('../models/Leave');
+    const OnDuty = require('../models/OnDuty');
+
+    const user = await User.findById(userId).select('-password').lean();
+    if (!user) {
+      return res.status(404).json({ message: 'Employee not found' });
     }
 
     const now = new Date();
@@ -181,46 +271,121 @@ router.get('/summary', auth, async (req, res) => {
     const targetYear = (year !== undefined && year !== '') ? parseInt(year) : now.getFullYear();
 
     const startDate = new Date(targetYear, targetMonth, 1);
-    const endDate = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59);
+    const totalDaysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+    const endDate = new Date(targetYear, targetMonth, totalDaysInMonth, 23, 59, 59);
 
-    const matchQuery = {
-      date: { $gte: startDate, $lte: endDate }
-    };
+    const [attendanceList, leaveList, onDutyList] = await Promise.all([
+      Attendance.find({
+        userId,
+        date: { $gte: startDate, $lte: endDate }
+      }).sort({ date: 1 }).lean(),
 
-    if (targetUserId) {
-      matchQuery.userId = targetUserId;
-    }
+      Leave.find({
+        userId,
+        $or: [
+          { startDate: { $gte: startDate, $lte: endDate } },
+          { endDate: { $gte: startDate, $lte: endDate } },
+          { startDate: { $lte: startDate }, endDate: { $gte: endDate } }
+        ]
+      }).sort({ createdAt: -1 }).lean(),
 
-    const attendance = await Attendance.find(matchQuery).populate('userId', 'name').lean();
+      OnDuty.find({
+        userId,
+        date: { $gte: startDate, $lte: endDate }
+      }).sort({ date: -1 }).lean(),
+    ]);
 
-    // Also get leaves for this period
-    const Leave = require('../models/Leave');
-    const leaveQuery = {
-      $or: [
-        { startDate: { $gte: startDate, $lte: endDate } },
-        { endDate: { $gte: startDate, $lte: endDate } },
-        { startDate: { $lte: startDate }, endDate: { $gte: endDate } }
-      ]
-    };
+    // Process attendance with Half-Day rule for un-checked-out past records
+    let presentDays = 0;
+    let halfDays = 0;
+    let absentDays = 0;
+    let totalWorkHours = 0;
+    let onDutyApprovedDays = 0;
 
-    if (targetUserId) {
-      leaveQuery.userId = targetUserId;
-    }
+    const processedAttendance = attendanceList.map((att) => {
+      const attDate = new Date(att.date);
+      const isPastDay = attDate < new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-    const leaves = await Leave.find(leaveQuery).populate('userId', 'name').lean();
-    
-    // Fetch holidays for this period
-    const holidays = await Holiday.find({
-      date: { $gte: startDate, $lte: endDate }
-    }).lean();
+      // If checked in but NO check out and not manually regularized, treat as Half-Day
+      let effectiveStatus = att.status;
+      let effectiveHours = att.workHours || 0;
 
-    const User = require('../models/User');
-    const members = await User.find({ role: 'user' }, 'name').lean();
+      if (att.checkIn && !att.checkOut && !att.isManualCheckout && isPastDay) {
+        effectiveStatus = 'half-day';
+        effectiveHours = 4.0;
+      }
 
-    res.json({ attendance, leaves, members, holidays });
+      if (effectiveStatus === 'present') {
+        presentDays += 1;
+        totalWorkHours += (effectiveHours || 8.0);
+      } else if (effectiveStatus === 'half-day') {
+        halfDays += 1;
+        presentDays += 0.5;
+        totalWorkHours += (effectiveHours || 4.0);
+      } else if (effectiveStatus === 'on-duty') {
+        presentDays += 1;
+        onDutyApprovedDays += 1;
+        totalWorkHours += 8.0;
+      }
+
+      return {
+        ...att,
+        effectiveStatus,
+        effectiveHours,
+        isMissingCheckout: att.checkIn && !att.checkOut && !att.isManualCheckout && isPastDay,
+      };
+    });
+
+    // Check approved OnDuty records that count as Present
+    onDutyList.forEach((od) => {
+      if (od.status === 'approved') {
+        const odDate = new Date(od.date);
+        const alreadyHasAtt = processedAttendance.some((a) => {
+          const aDate = new Date(a.date);
+          return aDate.getDate() === odDate.getDate() && aDate.getMonth() === odDate.getMonth();
+        });
+        if (!alreadyHasAtt) {
+          presentDays += 1;
+          onDutyApprovedDays += 1;
+          totalWorkHours += 8.0;
+        }
+      }
+    });
+
+    // Calculate absent days up to today
+    const maxDaysToCount = (now.getFullYear() === targetYear && now.getMonth() === targetMonth)
+      ? now.getDate()
+      : totalDaysInMonth;
+
+    let totalLeavesCount = 0;
+    leaveList.filter(l => l.status === 'approved').forEach(l => {
+      totalLeavesCount += (l.daysCount || 1.0);
+    });
+
+    absentDays = Math.max(0, maxDaysToCount - Math.ceil(presentDays) - Math.ceil(totalLeavesCount));
+
+    res.json({
+      employee: user,
+      month: targetMonth,
+      year: targetYear,
+      totalDaysInMonth,
+      summary: {
+        totalDaysInMonth,
+        presentDays,
+        halfDays,
+        absentDays,
+        totalWorkHours: parseFloat(totalWorkHours.toFixed(1)),
+        onDutyApprovedDays,
+        approvedLeavesCount: totalLeavesCount,
+      },
+      attendance: processedAttendance,
+      leaves: leaveList,
+      onDuty: onDutyList,
+    });
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
 
 module.exports = router;
+

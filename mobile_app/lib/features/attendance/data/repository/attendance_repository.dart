@@ -100,4 +100,61 @@ class AttendanceRepository {
   Future<void> deleteHoliday(String id) async {
     await _apiClient.delete(ApiConstants.holidayDetail(id));
   }
+
+  Future<Map<String, dynamic>> getEmployeeSummary({
+    required String userId,
+    required int month,
+    required int year,
+  }) async {
+    final response = await _apiClient.get(
+      ApiConstants.employeeSummary(userId),
+      queryParameters: {'month': month, 'year': year},
+    );
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<AttendanceModel> manualCheckout({
+    required String attendanceId,
+    DateTime? checkOut,
+    double? workHours,
+    String status = 'present',
+    String? reason,
+  }) async {
+    final response = await _apiClient.put(
+      ApiConstants.manualCheckout(attendanceId),
+      data: {
+        'checkOut': checkOut?.toIso8601String(),
+        'workHours': workHours,
+        'status': status,
+        'reason': reason,
+      },
+    );
+    final data = response.data as Map<String, dynamic>;
+    return AttendanceModel.fromJson(data['attendance'] ?? data);
+  }
+
+  Future<AttendanceModel> adminRegularizeAttendance({
+    required String userId,
+    required DateTime date,
+    DateTime? checkIn,
+    DateTime? checkOut,
+    double workHours = 8.0,
+    String status = 'present',
+    String? reason,
+  }) async {
+    final response = await _apiClient.post(
+      ApiConstants.adminRegularizeAttendance,
+      data: {
+        'userId': userId,
+        'date': date.toIso8601String(),
+        'checkIn': checkIn?.toIso8601String(),
+        'checkOut': checkOut?.toIso8601String(),
+        'workHours': workHours,
+        'status': status,
+        'reason': reason,
+      },
+    );
+    final data = response.data as Map<String, dynamic>;
+    return AttendanceModel.fromJson(data['attendance'] ?? data);
+  }
 }

@@ -107,4 +107,48 @@ class AttendanceCubit extends Cubit<AttendanceState> {
       }
     }
   }
+
+  Future<void> adminManualCheckout({
+    required String attendanceId,
+    DateTime? checkOut,
+    double? workHours,
+    String status = 'present',
+    String? reason,
+  }) async {
+    try {
+      await _repository.manualCheckout(
+        attendanceId: attendanceId,
+        checkOut: checkOut,
+        workHours: workHours,
+        status: status,
+        reason: reason,
+      );
+    } catch (e) {
+      emit(AttendanceFailure(e.toString()));
+    }
+  }
+
+  Future<void> adminRegularize({
+    required String userId,
+    required DateTime date,
+    DateTime? checkIn,
+    DateTime? checkOut,
+    double workHours = 8.0,
+    String status = 'present',
+    String? reason,
+  }) async {
+    try {
+      await _repository.adminRegularizeAttendance(
+        userId: userId,
+        date: date,
+        checkIn: checkIn,
+        checkOut: checkOut,
+        workHours: workHours,
+        status: status,
+        reason: reason,
+      );
+    } catch (e) {
+      emit(AttendanceFailure(e.toString()));
+    }
+  }
 }

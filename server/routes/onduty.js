@@ -97,10 +97,39 @@ router.put('/:id', adminAuth, async (req, res) => {
       return res.status(404).json({ message: 'On Duty record not found' });
     }
 
+    // When OnDuty is approved by Admin, mark attendance as present with isOnDuty flag
+    if (status === 'approved') {
+      const Attendance = require('../models/Attendance');
+      const odDate = new Date(onDuty.date);
+      const dayStart = new Date(odDate.getFullYear(), odDate.getMonth(), odDate.getDate());
+
+      let attendance = await Attendance.findOne({ userId: onDuty.userId._id, date: dayStart });
+      if (!attendance) {
+        attendance = new Attendance({
+          userId: onDuty.userId._id,
+          date: dayStart,
+          checkIn: new Date(dayStart.setHours(9, 30, 0, 0)),
+          checkOut: new Date(dayStart.setHours(18, 30, 0, 0)),
+          workHours: 8.0,
+          status: 'present',
+          isOnDuty: true,
+          isManualCheckout: true,
+          manualCheckoutReason: `Approved On Duty: ${onDuty.reason}`,
+        });
+      } else {
+        attendance.status = 'present';
+        attendance.isOnDuty = true;
+        attendance.workHours = attendance.workHours > 0 ? attendance.workHours : 8.0;
+        attendance.isManualCheckout = true;
+        attendance.manualCheckoutReason = `Approved On Duty: ${onDuty.reason}`;
+      }
+      await attendance.save();
+    }
+
     // Create a notification for the user in DB
     await Notification.create({
       title: `On Duty ${status.toUpperCase()}`,
-      message: `Your on duty request for ${new Date(onDuty.date).toLocaleDateString()} has been ${status}.`,
+      message: `Your on duty request for ${new Date(onDuty.date).toLocaleDateString()} has been ${status} and marked Present.`,
       type: status === 'approved' ? 'info' : 'warning',
       target: 'specific',
       recipients: [onDuty.userId._id],

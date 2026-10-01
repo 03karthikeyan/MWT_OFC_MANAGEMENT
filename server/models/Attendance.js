@@ -11,7 +11,20 @@ const attendanceSchema = new mongoose.Schema({
     longitude: { type: Number },
     address: { type: String, default: '' },
   },
-  status: { type: String, enum: ['present', 'absent', 'half-day'], default: 'present' },
+  checkInLocation: {
+    latitude: { type: Number },
+    longitude: { type: Number },
+    address: { type: String, default: '' },
+  },
+  checkOutLocation: {
+    latitude: { type: Number },
+    longitude: { type: Number },
+    address: { type: String, default: '' },
+  },
+  isOnDuty: { type: Boolean, default: false },
+  isManualCheckout: { type: Boolean, default: false },
+  manualCheckoutReason: { type: String, default: '' },
+  status: { type: String, enum: ['present', 'absent', 'half-day', 'on-duty'], default: 'present' },
 }, { timestamps: true });
 
 // Compound index: one record per user per day
