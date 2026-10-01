@@ -135,13 +135,26 @@ router.get('/today', auth, async (req, res) => {
 // Get my attendance
 router.get('/my', auth, async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 50;
-    const attendance = await Attendance.find({ userId: req.user._id })
+    const limit = parseInt(req.query.limit) || 100;
+    let query = { userId: req.user._id };
+
+    if (req.query.month !== undefined && req.query.month !== '') {
+      const targetMonth = parseInt(req.query.month);
+      const targetYear = (req.query.year !== undefined && req.query.year !== '')
+        ? parseInt(req.query.year)
+        : new Date().getFullYear();
+      const startDate = new Date(targetYear, targetMonth, 1);
+      const totalDaysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+      const endDate = new Date(targetYear, targetMonth, totalDaysInMonth, 23, 59, 59);
+      query.date = { $gte: startDate, $lte: endDate };
+    }
+
+    const attendance = await Attendance.find(query)
       .sort({ date: -1 })
       .limit(limit);
     res.json({ attendance });
   } catch (err) {
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
 
@@ -242,6 +255,140 @@ router.post('/admin-regularize', adminAuth, async (req, res) => {
       .populate('userId', 'name username employeeId jobRole profilePicture');
 
     res.json({ message: 'Attendance created/regularized successfully', attendance: populated });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+});
+
+// GET /api/attendance/summary - Current authenticated employee's monthly attendance summary & statistics
+router.get('/summary', auth, async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { month, year } = req.query;
+
+    const Leave = require('../models/Leave');
+    const OnDuty = require('../models/OnDuty');
+    const Holiday = require('../models/Holiday');
+
+    const now = new Date();
+    const targetMonth = (month !== undefined && month !== '') ? parseInt(month) : now.getMonth();
+    const targetYear = (year !== undefined && year !== '') ? parseInt(year) : now.getFullYear();
+
+    const startDate = new Date(targetYear, targetMonth, 1);
+    const totalDaysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+    const endDate = new Date(targetYear, targetMonth, totalDaysInMonth, 23, 59, 59);
+
+    const [attendanceList, leaveList, onDutyList, holidayList] = await Promise.all([
+      Attendance.find({
+        userId,
+        date: { $gte: startDate, $lte: endDate }
+      }).sort({ date: 1 }).lean(),
+
+      Leave.find({
+        userId,
+        $or: [
+          { startDate: { $gte: startDate, $lte: endDate } },
+          { endDate: { $gte: startDate, $lte: endDate } },
+          { startDate: { $lte: startDate }, endDate: { $gte: endDate } }
+        ]
+      }).sort({ createdAt: -1 }).lean(),
+
+      OnDuty.find({
+        userId,
+        date: { $gte: startDate, $lte: endDate }
+      }).sort({ date: -1 }).lean(),
+
+      Holiday.find({
+        date: { $gte: startDate, $lte: endDate }
+      }).sort({ date: 1 }).lean(),
+    ]);
+
+    // Process attendance with Half-Day rule for un-checked-out past records
+    let presentDays = 0;
+    let halfDays = 0;
+    let absentDays = 0;
+    let totalWorkHours = 0;
+    let onDutyApprovedDays = 0;
+
+    const processedAttendance = attendanceList.map((att) => {
+      const attDate = new Date(att.date);
+      const isPastDay = attDate < new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+      // If checked in but NO check out and not manually regularized, treat as Half-Day
+      let effectiveStatus = att.status;
+      let effectiveHours = att.workHours || 0;
+
+      if (att.checkIn && !att.checkOut && !att.isManualCheckout && isPastDay) {
+        effectiveStatus = 'half-day';
+        effectiveHours = 4.0;
+      }
+
+      if (effectiveStatus === 'present') {
+        presentDays += 1;
+        totalWorkHours += (effectiveHours || 8.0);
+      } else if (effectiveStatus === 'half-day') {
+        halfDays += 1;
+        presentDays += 0.5;
+        totalWorkHours += (effectiveHours || 4.0);
+      } else if (effectiveStatus === 'on-duty') {
+        presentDays += 1;
+        onDutyApprovedDays += 1;
+        totalWorkHours += 8.0;
+      }
+
+      return {
+        ...att,
+        effectiveStatus,
+        effectiveHours,
+        isMissingCheckout: att.checkIn && !att.checkOut && !att.isManualCheckout && isPastDay,
+      };
+    });
+
+    // Check approved OnDuty records that count as Present
+    onDutyList.forEach((od) => {
+      if (od.status === 'approved') {
+        const odDate = new Date(od.date);
+        const alreadyHasAtt = processedAttendance.some((a) => {
+          const aDate = new Date(a.date);
+          return aDate.getDate() === odDate.getDate() && aDate.getMonth() === odDate.getMonth();
+        });
+        if (!alreadyHasAtt) {
+          presentDays += 1;
+          onDutyApprovedDays += 1;
+          totalWorkHours += 8.0;
+        }
+      }
+    });
+
+    const maxDaysToCount = (now.getFullYear() === targetYear && now.getMonth() === targetMonth)
+      ? now.getDate()
+      : totalDaysInMonth;
+
+    let totalLeavesCount = 0;
+    leaveList.filter(l => l.status === 'approved').forEach(l => {
+      totalLeavesCount += (l.daysCount || 1.0);
+    });
+
+    absentDays = Math.max(0, maxDaysToCount - Math.ceil(presentDays) - Math.ceil(totalLeavesCount));
+
+    res.json({
+      month: targetMonth,
+      year: targetYear,
+      totalDaysInMonth,
+      summary: {
+        totalDaysInMonth,
+        presentDays,
+        halfDays,
+        absentDays,
+        totalWorkHours: parseFloat(totalWorkHours.toFixed(1)),
+        onDutyApprovedDays,
+        approvedLeavesCount: totalLeavesCount,
+      },
+      attendance: processedAttendance,
+      leaves: leaveList,
+      onDuty: onDutyList,
+      holidays: holidayList,
+    });
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }

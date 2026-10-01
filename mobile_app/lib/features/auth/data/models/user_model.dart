@@ -17,6 +17,7 @@ class UserModel {
   final bool canManageInternships;
   final bool canManageEnquiries;
   final bool canManageLeads;
+  final Map<String, dynamic>? leaveBalance;
   final String status;
   final DateTime? createdAt;
 
@@ -39,6 +40,7 @@ class UserModel {
     required this.canManageInternships,
     required this.canManageEnquiries,
     required this.canManageLeads,
+    this.leaveBalance,
     required this.status,
     this.createdAt,
   });
@@ -67,6 +69,9 @@ class UserModel {
       canManageInternships: json['canManageInternships'] ?? false,
       canManageEnquiries: json['canManageEnquiries'] ?? false,
       canManageLeads: json['canManageLeads'] ?? false,
+      leaveBalance: json['leaveBalance'] != null && json['leaveBalance'] is Map
+          ? Map<String, dynamic>.from(json['leaveBalance'] as Map)
+          : null,
       status: json['status'] ?? 'enquiry',
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'].toString())
@@ -94,6 +99,7 @@ class UserModel {
       'canManageInternships': canManageInternships,
       'canManageEnquiries': canManageEnquiries,
       'canManageLeads': canManageLeads,
+      'leaveBalance': leaveBalance,
       'status': status,
       'createdAt': createdAt?.toIso8601String(),
     };
@@ -107,6 +113,7 @@ class UserModel {
     String? bankAccountNo,
     String? ifscCode,
     String? profilePicture,
+    Map<String, dynamic>? leaveBalance,
   }) {
     return UserModel(
       id: id,
@@ -127,6 +134,7 @@ class UserModel {
       canManageInternships: canManageInternships,
       canManageEnquiries: canManageEnquiries,
       canManageLeads: canManageLeads,
+      leaveBalance: leaveBalance ?? this.leaveBalance,
       status: status,
       createdAt: createdAt,
     );

@@ -16,6 +16,7 @@ import '../../../attendance/data/models/attendance_model.dart';
 import '../../../attendance/data/repository/attendance_repository.dart';
 import '../../../leave/data/models/leave_model.dart';
 import '../../../on_duty/data/models/on_duty_model.dart';
+import '../../../auth/data/models/user_model.dart';
 
 class AdminEmployeeDetailsPage extends StatefulWidget {
   final String employeeId;
@@ -484,10 +485,12 @@ class _AdminEmployeeDetailsPageState extends State<AdminEmployeeDetailsPage> wit
   }
 
   // 2. Leaves Tab
-  Widget _buildLeavesTab(dynamic emp) {
-    final balances = (emp.leaveBalance is Map)
-        ? emp.leaveBalance as Map<String, dynamic>
-        : {'casual': 12, 'sick': 6, 'earned': 15};
+  Widget _buildLeavesTab(UserModel emp) {
+    final balances = (emp.leaveBalance is Map && emp.leaveBalance!.isNotEmpty)
+        ? emp.leaveBalance!
+        : (_summaryData != null && _summaryData!['leaveBalance'] is Map)
+            ? _summaryData!['leaveBalance'] as Map<String, dynamic>
+            : const {'casual': 12, 'sick': 6, 'earned': 15};
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -640,7 +643,7 @@ class _AdminEmployeeDetailsPageState extends State<AdminEmployeeDetailsPage> wit
   }
 
   // 4. Profile & Info Tab
-  Widget _buildProfileInfoTab(dynamic emp) {
+  Widget _buildProfileInfoTab(UserModel emp) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -666,7 +669,7 @@ class _AdminEmployeeDetailsPageState extends State<AdminEmployeeDetailsPage> wit
             child: Column(
               children: [
                 _buildInfoRow('Bank Name', emp.bankName.isEmpty ? 'N/A' : emp.bankName),
-                _buildInfoRow('Account Number', emp.bankAccountNo.isEmpty ? 'N/A' : '•••• ${emp.bankAccountNo.substring(emp.bankAccountNo.length.clamp(4, 15) - 4)}'),
+                _buildInfoRow('Account Number', emp.bankAccountNo.isEmpty ? 'N/A' : (emp.bankAccountNo.length >= 4 ? '•••• ${emp.bankAccountNo.substring(emp.bankAccountNo.length - 4)}' : emp.bankAccountNo)),
                 _buildInfoRow('IFSC Code', emp.ifscCode.isEmpty ? 'N/A' : emp.ifscCode),
               ],
             ),
