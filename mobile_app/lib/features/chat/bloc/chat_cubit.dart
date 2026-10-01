@@ -135,10 +135,19 @@ class ChatCubit extends Cubit<ChatState> {
         final msg = ChatMessageModel.fromJson(msgMap);
 
         if (state.activeThreadUserId == msg.receiverId) {
-          final existsIndex = state.activeMessages.indexWhere((m) => m.id == msg.id);
-          if (existsIndex == -1) {
-            final updated = List<ChatMessageModel>.from(state.activeMessages)..add(msg);
+          final tempIndex = state.activeMessages.indexWhere(
+            (m) => m.id.startsWith('temp_') && m.content == msg.content,
+          );
+          if (tempIndex != -1) {
+            final updated = List<ChatMessageModel>.from(state.activeMessages);
+            updated[tempIndex] = msg;
             emit(state.copyWith(activeMessages: updated));
+          } else {
+            final exists = state.activeMessages.any((m) => m.id == msg.id);
+            if (!exists) {
+              final updated = List<ChatMessageModel>.from(state.activeMessages)..add(msg);
+              emit(state.copyWith(activeMessages: updated));
+            }
           }
         }
       } catch (e) {
@@ -280,14 +289,7 @@ class ChatCubit extends Cubit<ChatState> {
       incrementUnread: false,
     );
 
-    // 3. Emit real-time over Socket.io
-    _socketService.sendPrivateMessage(
-      senderId: senderId,
-      receiverId: receiverId,
-      content: cleanContent,
-    );
-
-    // 4. Save to Database via REST API
+    // 3. Persist via REST API (backend broadcasts over Socket.io to receiver & sender)
     try {
       final sentMsg = await _repository.sendMessage(receiverId, cleanContent);
       final replaced = state.activeMessages.map((m) {
@@ -295,7 +297,12 @@ class ChatCubit extends Cubit<ChatState> {
       }).toList();
       emit(state.copyWith(activeMessages: replaced));
     } catch (e) {
-      log("⚠️ Failed to persist message via REST: $e");
+      log("⚠️ Failed to persist message via REST: $e, falling back to Socket.io direct emission");
+      _socketService.sendPrivateMessage(
+        senderId: senderId,
+        receiverId: receiverId,
+        content: cleanContent,
+      );
     }
   }
 

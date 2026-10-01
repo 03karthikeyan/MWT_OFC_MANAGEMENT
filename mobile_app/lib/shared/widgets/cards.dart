@@ -56,6 +56,7 @@ class StatCard extends StatelessWidget {
   final IconData icon;
   final Color color;
   final String? subtitle;
+  final VoidCallback? onTap;
 
   const StatCard({
     super.key,
@@ -64,27 +65,29 @@ class StatCard extends StatelessWidget {
     required this.icon,
     required this.color,
     this.subtitle,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return AppCard(
-      padding: const EdgeInsets.all(16),
+      onTap: onTap,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
               icon,
               color: color,
-              size: 26,
+              size: 22,
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

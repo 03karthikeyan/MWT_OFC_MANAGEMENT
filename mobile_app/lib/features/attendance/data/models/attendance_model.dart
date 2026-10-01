@@ -81,7 +81,8 @@ class AttendanceModel {
       return 'On Duty';
     }
     if (checkOut != null) {
-      return isManualCheckout ? 'Regularized ($workHours hrs)' : 'Completed ($workHours hrs)';
+      final hrs = (workHours % 1 == 0) ? '${workHours.toInt()}h' : '${workHours.toStringAsFixed(1)}h';
+      return isManualCheckout ? 'Regularized ($hrs)' : 'Completed ($hrs)';
     }
     final now = DateTime.now();
     final isToday = date.year == now.year &&
@@ -90,7 +91,7 @@ class AttendanceModel {
     if (isToday) {
       return 'Active Now';
     }
-    return 'Half-Day (Missing Checkout)';
+    return isMissingCheckout ? 'Half-Day' : (effectiveStatus.isNotEmpty ? effectiveStatus : 'Absent');
   }
 
   Map<String, dynamic> toJson() {

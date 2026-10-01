@@ -161,73 +161,82 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Stats Grid
-                        Row(
-                          children: [
-                            Expanded(
-                              child: StatCard(
-                                title: 'Employees',
-                                value: '${stats.totalUsers}',
-                                icon: Icons.group_outlined,
-                                color: AppTheme.primary,
+                        // Stats Grid (Uniform size and full tap navigation)
+                        IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                child: StatCard(
+                                  title: 'Employees',
+                                  value: '${stats.totalUsers}',
+                                  icon: Icons.group_outlined,
+                                  color: AppTheme.primary,
+                                  onTap: () {
+                                    final scope = NavigationShellScope.of(context);
+                                    if (scope != null) {
+                                      scope.switchTab(1);
+                                    } else {
+                                      context.push('/admin/employees');
+                                    }
+                                  },
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: StatCard(
-                                title: 'Present Today',
-                                value: '${stats.presentToday}',
-                                icon: Icons.check_circle_outline,
-                                color: AppTheme.success,
-                                subtitle: '${attendanceRate.toStringAsFixed(0)}% attendance rate',
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: StatCard(
+                                  title: 'Present Today',
+                                  value: '${stats.presentToday}',
+                                  icon: Icons.check_circle_outline,
+                                  color: AppTheme.success,
+                                  onTap: () {
+                                    final scope = NavigationShellScope.of(context);
+                                    if (scope != null) {
+                                      scope.switchTab(2);
+                                    } else {
+                                      context.push('/admin/attendance');
+                                    }
+                                  },
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () => context.push('/admin/onduty'),
+                        const SizedBox(height: 12),
+                        IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
                                 child: StatCard(
                                   title: 'Pending OnDuty',
                                   value: '${stats.pendingOnDuty}',
                                   icon: Icons.map_outlined,
                                   color: AppTheme.warning,
+                                  onTap: () => context.push('/admin/onduty'),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () => context.push('/admin/internships'),
+                              const SizedBox(width: 12),
+                              Expanded(
                                 child: StatCard(
                                   title: 'Active Interns',
                                   value: '${stats.activeInterns}',
                                   icon: Icons.school_outlined,
                                   color: AppTheme.secondary,
+                                  onTap: () => context.push('/admin/internships'),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () => context.push('/admin/payslips'),
-                                child: StatCard(
-                                  title: 'Internship Invoices',
-                                  value: '₹${stats.totalCollected.toStringAsFixed(0)}',
-                                  icon: Icons.payments_outlined,
-                                  color: AppTheme.success,
-                                  subtitle: 'Total Invoiced: ₹${stats.totalInvoiced.toStringAsFixed(0)}',
-                                ),
-                              ),
-                            ),
-                          ],
+                        const SizedBox(height: 12),
+                        StatCard(
+                          title: 'Internship Invoices',
+                          value: '₹${stats.totalCollected.toStringAsFixed(0)}',
+                          icon: Icons.payments_outlined,
+                          color: AppTheme.success,
+                          subtitle: 'Total Invoiced: ₹${stats.totalInvoiced.toStringAsFixed(0)}',
+                          onTap: () => context.push('/admin/internships'),
                         ),
                         const SizedBox(height: 20),
                         // Quick Action HR Hub

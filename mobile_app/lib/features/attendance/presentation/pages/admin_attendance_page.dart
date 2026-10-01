@@ -124,10 +124,14 @@ class _AdminAttendancePageState extends State<AdminAttendancePage> {
                                       Text(
                                         employeeName,
                                         style: const TextStyle(fontWeight: FontWeight.bold),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                       Text(
                                         jobRole,
                                         style: const TextStyle(color: AppTheme.textLight, fontSize: 12),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
@@ -138,11 +142,17 @@ class _AdminAttendancePageState extends State<AdminAttendancePage> {
                                                     : '  - Active')
                                             : 'Absent',
                                         style: const TextStyle(color: AppTheme.textLight, fontSize: 11),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ],
                                   ),
                                 ),
-                                StatusChip(label: log.displayStatus, status: log.displayStatus),
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  flex: 0,
+                                  child: StatusChip(label: log.displayStatus, status: log.displayStatus),
+                                ),
                               ],
                             ),
                           ),

@@ -678,30 +678,40 @@ class _AttendancePageState extends State<AttendancePage> {
                           return Container(
                             margin: const EdgeInsets.symmetric(vertical: 4),
                             child: AppCard(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        DateFormat('EEEE, dd MMM').format(log.date),
-                                        style: const TextStyle(fontWeight: FontWeight.bold),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        log.checkIn != null
-                                            ? 'In: ${DateFormat('hh:mm a').format(log.checkIn!)}' +
-                                                (log.checkOut != null
-                                                    ? '  Out: ${DateFormat('hh:mm a').format(log.checkOut!)}'
-                                                    : '  - Active')
-                                            : 'No punches',
-                                        style: const TextStyle(color: AppTheme.textLight, fontSize: 12),
-                                      ),
-                                    ],
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          DateFormat('EEEE, dd MMM').format(log.date),
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          log.checkIn != null
+                                              ? 'In: ${DateFormat('hh:mm a').format(log.checkIn!)}' +
+                                                  (log.checkOut != null
+                                                      ? '  Out: ${DateFormat('hh:mm a').format(log.checkOut!)}'
+                                                      : '  - Active')
+                                              : 'No punches',
+                                          style: const TextStyle(color: AppTheme.textLight, fontSize: 11),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                  StatusChip(label: log.displayStatus, status: log.displayStatus),
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    flex: 0,
+                                    child: StatusChip(label: log.displayStatus, status: log.displayStatus),
+                                  ),
                                 ],
                               ),
                             ),

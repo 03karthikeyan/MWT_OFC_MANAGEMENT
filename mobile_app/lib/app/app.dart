@@ -147,6 +147,16 @@ class _HrmsAppState extends State<HrmsApp> {
       }
     });
 
+    // Connect socket immediately if already authenticated
+    if (_authBloc.state is Authenticated) {
+      final user = (_authBloc.state as Authenticated).user;
+      SocketService.instance.connect(
+        userId: user.id,
+        role: user.role,
+      );
+      FirebaseMessagingService.syncUserFcmToken(_apiClient);
+    }
+
     // Listen to Auth State changes for Socket Connection and FCM Sync
     _authSub = _authBloc.stream.listen((state) {
       if (state is Authenticated) {

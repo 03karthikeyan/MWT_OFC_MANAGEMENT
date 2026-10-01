@@ -25,9 +25,14 @@ class ChatMessageModel {
     String senderId = '';
     UserModel? sender;
     final rawSender = json['senderId'];
-    if (rawSender is Map<String, dynamic>) {
-      sender = UserModel.fromJson(rawSender);
-      senderId = sender.id;
+    if (rawSender is Map) {
+      final senderMap = Map<String, dynamic>.from(rawSender);
+      try {
+        sender = UserModel.fromJson(senderMap);
+        senderId = sender.id;
+      } catch (_) {
+        senderId = senderMap['_id']?.toString() ?? senderMap['id']?.toString() ?? '';
+      }
     } else if (rawSender != null) {
       senderId = rawSender.toString();
     }
@@ -35,9 +40,14 @@ class ChatMessageModel {
     String receiverId = '';
     UserModel? receiver;
     final rawReceiver = json['receiverId'];
-    if (rawReceiver is Map<String, dynamic>) {
-      receiver = UserModel.fromJson(rawReceiver);
-      receiverId = receiver.id;
+    if (rawReceiver is Map) {
+      final receiverMap = Map<String, dynamic>.from(rawReceiver);
+      try {
+        receiver = UserModel.fromJson(receiverMap);
+        receiverId = receiver.id;
+      } catch (_) {
+        receiverId = receiverMap['_id']?.toString() ?? receiverMap['id']?.toString() ?? '';
+      }
     } else if (rawReceiver != null) {
       receiverId = rawReceiver.toString();
     }

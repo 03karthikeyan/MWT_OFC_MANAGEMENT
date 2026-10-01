@@ -49,7 +49,7 @@ class SocketService {
         ApiConstants.baseUrl,
         IO.OptionBuilder()
             .setTransports(['websocket', 'polling'])
-            .enableAutoConnect()
+            .disableAutoConnect()
             .enableReconnection()
             .setReconnectionDelay(1500)
             .setReconnectionAttempts(20)
@@ -111,6 +111,8 @@ class SocketService {
           _notificationStreamController.add(Map<String, dynamic>.from(data));
         }
       });
+
+      _socket!.connect();
     } catch (e) {
       log("⚠️ Exception during socket init: $e");
     }

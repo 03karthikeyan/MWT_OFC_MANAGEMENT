@@ -17,18 +17,20 @@ class StatusChip extends StatelessWidget {
     final bgColor = statusColor.withOpacity(0.12);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(100),
       ),
       child: Text(
         label.toUpperCase(),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: statusColor,
               fontWeight: FontWeight.bold,
-              fontSize: 11,
-              letterSpacing: 0.5,
+              fontSize: 10,
+              letterSpacing: 0.3,
             ),
       ),
     );

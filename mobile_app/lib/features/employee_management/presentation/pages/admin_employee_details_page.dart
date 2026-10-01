@@ -455,10 +455,15 @@ class _AdminEmployeeDetailsPageState extends State<AdminEmployeeDetailsPage> wit
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text(
-                                  'Calculated as Half-Day (4.0h)',
-                                  style: TextStyle(fontSize: 11, color: Color(0xFFF59E0B), fontWeight: FontWeight.bold),
+                                const Expanded(
+                                  child: Text(
+                                    'Calculated as Half-Day (4.0h)',
+                                    style: TextStyle(fontSize: 11, color: Color(0xFFF59E0B), fontWeight: FontWeight.bold),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
+                                const SizedBox(width: 8),
                                 ElevatedButton.icon(
                                   icon: const Icon(Icons.edit_calendar, size: 14, color: Colors.white),
                                   label: const Text('Manual Check-out', style: TextStyle(fontSize: 11, color: Colors.white)),
