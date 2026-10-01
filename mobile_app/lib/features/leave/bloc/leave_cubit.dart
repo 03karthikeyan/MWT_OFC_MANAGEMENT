@@ -15,10 +15,15 @@ class LeaveLoading extends LeaveState {}
 class LeaveLoaded extends LeaveState {
   final List<LeaveModel> leaves;
   final int pendingCount;
-  const LeaveLoaded({required this.leaves, this.pendingCount = 0});
+  final Map<String, dynamic> balances;
+  const LeaveLoaded({
+    required this.leaves,
+    this.pendingCount = 0,
+    this.balances = const {'casual': 12, 'sick': 6, 'earned': 15},
+  });
 
   @override
-  List<Object?> get props => [leaves, pendingCount];
+  List<Object?> get props => [leaves, pendingCount, balances];
 }
 
 class LeaveFailure extends LeaveState {
@@ -40,7 +45,8 @@ class LeaveCubit extends Cubit<LeaveState> {
     emit(LeaveLoading());
     try {
       final list = await _repository.getMyLeaves();
-      emit(LeaveLoaded(leaves: list));
+      final balances = await _repository.getLeaveBalances();
+      emit(LeaveLoaded(leaves: list, balances: balances));
     } catch (e) {
       emit(LeaveFailure(e.toString()));
     }
@@ -59,22 +65,39 @@ class LeaveCubit extends Cubit<LeaveState> {
     }
   }
 
-  Future<void> requestLeave(DateTime startDate, DateTime endDate, String reason) async {
+  Future<void> requestLeave(
+    DateTime startDate,
+    DateTime endDate,
+    String reason, {
+    String leaveType = 'casual',
+    String session = 'full_day',
+  }) async {
     emit(LeaveLoading());
     try {
-      await _repository.applyLeave(startDate, endDate, reason);
+      await _repository.applyLeave(
+        startDate,
+        endDate,
+        reason,
+        leaveType: leaveType,
+        session: session,
+      );
       await loadMyLeaves();
     } catch (e) {
       emit(LeaveFailure(e.toString()));
     }
   }
 
-  Future<void> reviewLeave(String id, String status, {bool showLoading = true}) async {
+  Future<void> reviewLeave(
+    String id,
+    String status, {
+    String? rejectionReason,
+    bool showLoading = true,
+  }) async {
     if (showLoading) {
       emit(LeaveLoading());
     }
     try {
-      await _repository.updateLeave(id, status);
+      await _repository.updateLeave(id, status, rejectionReason: rejectionReason);
       await loadAllLeaves(showLoading: showLoading);
     } catch (e) {
       emit(LeaveFailure(e.toString()));

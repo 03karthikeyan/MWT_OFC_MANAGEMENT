@@ -229,6 +229,41 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                             ),
                           ],
                         ),
+                        const SizedBox(height: 20),
+                        // Quick Action HR Hub
+                        _buildSectionHeader("Quick Operations"),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            _buildQuickActionBtn(
+                              icon: Icons.analytics_outlined,
+                              label: 'Muster Roll\nReports',
+                              color: AppTheme.primary,
+                              onTap: () => context.push('/admin/reports'),
+                            ),
+                            const SizedBox(width: 8),
+                            _buildQuickActionBtn(
+                              icon: Icons.add_task_outlined,
+                              label: 'Task\nDelegation',
+                              color: const Color(0xFF0D9488),
+                              onTap: () => context.push('/admin/tasks'),
+                            ),
+                            const SizedBox(width: 8),
+                            _buildQuickActionBtn(
+                              icon: Icons.receipt_long_outlined,
+                              label: 'Expense\nClaims',
+                              color: const Color(0xFFF59E0B),
+                              onTap: () => context.push('/admin/expenses'),
+                            ),
+                            const SizedBox(width: 8),
+                            _buildQuickActionBtn(
+                              icon: Icons.inventory_2_outlined,
+                              label: 'Assets\nInventory',
+                              color: const Color(0xFF6366F1),
+                              onTap: () => context.push('/admin/assets'),
+                            ),
+                          ],
+                        ),
                         const SizedBox(height: 28),
 
                         // Pending Leaves Card
@@ -532,6 +567,58 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           child: Text(
             message,
             style: const TextStyle(color: AppTheme.textLight, fontSize: 13),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickActionBtn({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.02),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textDark,
+                  height: 1.1,
+                ),
+              ),
+            ],
           ),
         ),
       ),

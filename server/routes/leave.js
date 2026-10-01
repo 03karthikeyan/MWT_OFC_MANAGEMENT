@@ -5,25 +5,68 @@ const Notification = require('../models/Notification');
 
 const { sendNotification } = require('../services/pushNotification');
 
+// Get leave balances for current user or specific user
+router.get('/balances', auth, async (req, res) => {
+  try {
+    const User = require('../models/User');
+    const user = await User.findById(req.user._id).select('leaveBalance name employeeId');
+    const defaultBalance = { casual: 12, sick: 6, earned: 15 };
+    const balance = user?.leaveBalance || defaultBalance;
+    res.json({ balance });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+});
+
+router.get('/balances/:userId', adminAuth, async (req, res) => {
+  try {
+    const User = require('../models/User');
+    const user = await User.findById(req.params.userId).select('leaveBalance name employeeId');
+    const defaultBalance = { casual: 12, sick: 6, earned: 15 };
+    const balance = user?.leaveBalance || defaultBalance;
+    res.json({ balance });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+});
+
 // Apply for leave
 router.post('/', auth, async (req, res) => {
   try {
-    const { startDate, endDate, reason } = req.body;
+    const { startDate, endDate, reason, leaveType, session } = req.body;
     if (!startDate || !endDate || !reason) {
       return res.status(400).json({ message: 'All fields are required' });
     }
+
+    const type = leaveType || 'casual';
+    const sess = session || 'full_day';
+
+    let count = 1.0;
+    if (sess === 'first_half' || sess === 'second_half') {
+      count = 0.5;
+    } else {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const diffTime = Math.abs(end - start);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+      count = diffDays > 0 ? diffDays : 1.0;
+    }
+
     const leave = await Leave.create({
       userId: req.user._id,
       startDate,
       endDate,
       reason,
+      leaveType: type,
+      session: sess,
+      daysCount: count,
     });
 
     // Notify Admin of new leave application
     sendNotification({
       targetRole: 'admin',
       title: 'New Leave Request',
-      message: `${req.user.name} requested leave (${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()})`,
+      message: `${req.user.name} requested ${type.toUpperCase()} leave (${count} day(s))`,
       data: { type: 'leave', leaveId: leave._id.toString() },
     });
 
@@ -47,7 +90,7 @@ router.get('/my', auth, async (req, res) => {
 router.get('/all', adminAuth, async (req, res) => {
   try {
     const leaves = await Leave.find()
-      .populate('userId', 'name username email employeeId role jobRole profilePicture')
+      .populate('userId', 'name username email employeeId role jobRole profilePicture leaveBalance')
       .sort({ createdAt: -1 })
       .limit(200)
       .lean();
@@ -60,24 +103,41 @@ router.get('/all', adminAuth, async (req, res) => {
 // Admin: Update leave status
 router.put('/:id', adminAuth, async (req, res) => {
   try {
-    const { status } = req.body;
+    const { status, rejectionReason } = req.body;
     if (!['approved', 'rejected'].includes(status)) {
       return res.status(400).json({ message: 'Invalid status' });
     }
-    const leave = await Leave.findByIdAndUpdate(
-      req.params.id,
-      { status },
-      { returnDocument: 'after' }
-    ).populate('userId', 'name username employeeId role jobRole profilePicture');
-    
-    if (!leave) {
+
+    const existingLeave = await Leave.findById(req.params.id);
+    if (!existingLeave) {
       return res.status(404).json({ message: 'Leave not found' });
     }
+
+    existingLeave.status = status;
+    if (rejectionReason) existingLeave.rejectionReason = rejectionReason;
+    await existingLeave.save();
+
+    // Auto-deduct from quota on approval if not unpaid
+    if (status === 'approved' && existingLeave.leaveType !== 'unpaid') {
+      const User = require('../models/User');
+      const user = await User.findById(existingLeave.userId);
+      if (user) {
+        if (!user.leaveBalance) {
+          user.leaveBalance = { casual: 12, sick: 6, earned: 15 };
+        }
+        const currentBal = user.leaveBalance[existingLeave.leaveType] || 0;
+        user.leaveBalance[existingLeave.leaveType] = Math.max(0, currentBal - (existingLeave.daysCount || 1));
+        await user.save();
+      }
+    }
+
+    const leave = await Leave.findById(req.params.id)
+      .populate('userId', 'name username employeeId role jobRole profilePicture leaveBalance');
 
     // Create a specific notification for the user
     await Notification.create({
       title: `Leave ${status.toUpperCase()}`,
-      message: `Your leave request from ${new Date(leave.startDate).toLocaleDateString()} to ${new Date(leave.endDate).toLocaleDateString()} has been ${status}.`,
+      message: `Your ${leave.leaveType || ''} leave request (${leave.daysCount || 1} day(s)) has been ${status}.`,
       type: status === 'approved' ? 'info' : 'warning',
       target: 'specific',
       recipients: [leave.userId._id],
@@ -94,7 +154,7 @@ router.put('/:id', adminAuth, async (req, res) => {
 
     res.json({ message: `Leave ${status}`, leave });
   } catch (err) {
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
 

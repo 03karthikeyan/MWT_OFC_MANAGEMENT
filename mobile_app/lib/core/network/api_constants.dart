@@ -1,5 +1,5 @@
 class ApiConstants {
-  static const String defaultBaseUrl = 'https://mediawavetech.vercel.app';
+  static const String defaultBaseUrl = 'https://mwt-ofc-management.onrender.com';
 
   static String _customBaseUrl = '';
 
@@ -113,4 +113,34 @@ class ApiConstants {
   static const String chatMessages = '/api/chat/messages';
   static String chatHistory(String userId) => '/api/chat/messages/$userId';
   static String chatMarkRead(String userId) => '/api/chat/read/$userId';
+
+  // Leave Balances
+  static const String leaveBalances = '/api/leave/balances';
+  static String userLeaveBalances(String userId) => '/api/leave/balances/$userId';
+
+  // Tasks endpoints
+  static const String myTasks = '/api/tasks/my';
+  static const String allTasks = '/api/tasks/all';
+  static const String tasks = '/api/tasks';
+  static String taskStatus(String id) => '/api/tasks/$id/status';
+  static String taskComments(String id) => '/api/tasks/$id/comments';
+  static String taskDetail(String id) => '/api/tasks/$id';
+
+  // Expenses endpoints
+  static const String myExpenses = '/api/expenses/my';
+  static const String allExpenses = '/api/expenses/all';
+  static const String expenses = '/api/expenses';
+  static String expenseStatus(String id) => '/api/expenses/$id/status';
+  static String expenseDetail(String id) => '/api/expenses/$id';
+
+  // Assets endpoints
+  static const String myAssets = '/api/assets/my';
+  static const String allAssets = '/api/assets/all';
+  static const String assets = '/api/assets';
+  static String assetAllocate(String id) => '/api/assets/$id/allocate';
+  static String assetDetail(String id) => '/api/assets/$id';
+
+  // Reports endpoints
+  static const String reportsMusterRoll = '/api/reports/muster-roll';
+  static const String reportsSummaryOverview = '/api/reports/summary-overview';
 }

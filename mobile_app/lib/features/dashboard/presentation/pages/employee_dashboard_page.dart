@@ -161,6 +161,40 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
                   ),
                 ],
               ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildQuickAction(
+                    context,
+                    icon: Icons.assignment_turned_in_outlined,
+                    label: 'My Tasks',
+                    color: const Color(0xFF0D9488),
+                    onTap: () => context.push('/tasks'),
+                  ),
+                  _buildQuickAction(
+                    context,
+                    icon: Icons.receipt_long_outlined,
+                    label: 'Expenses',
+                    color: const Color(0xFFF59E0B),
+                    onTap: () => context.push('/expenses'),
+                  ),
+                  _buildQuickAction(
+                    context,
+                    icon: Icons.inventory_2_outlined,
+                    label: 'My Assets',
+                    color: const Color(0xFF6366F1),
+                    onTap: () => context.push('/assets'),
+                  ),
+                  _buildQuickAction(
+                    context,
+                    icon: Icons.payments_outlined,
+                    label: 'Payslips',
+                    color: const Color(0xFFE11D48),
+                    onTap: () => context.push('/payslips'),
+                  ),
+                ],
+              ),
               const SizedBox(height: 28),
 
               // Bloc Data

@@ -70,6 +70,24 @@ class EmployeeMorePage extends StatelessWidget {
             // Links List
             _buildLinkItem(
               context,
+              icon: Icons.assignment_turned_in_outlined,
+              label: 'Assigned Tasks',
+              onTap: () => context.push('/tasks'),
+            ),
+            _buildLinkItem(
+              context,
+              icon: Icons.receipt_long_outlined,
+              label: 'My Reimbursements & Expenses',
+              onTap: () => context.push('/expenses'),
+            ),
+            _buildLinkItem(
+              context,
+              icon: Icons.inventory_2_outlined,
+              label: 'My Allocated Assets',
+              onTap: () => context.push('/assets'),
+            ),
+            _buildLinkItem(
+              context,
               icon: Icons.chat_bubble_outline_rounded,
               label: 'Team Messages (Chat)',
               onTap: () => context.push('/chat'),

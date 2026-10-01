@@ -5,6 +5,12 @@ const attendanceSchema = new mongoose.Schema({
   date: { type: Date, required: true },
   checkIn: { type: Date },
   checkOut: { type: Date },
+  workHours: { type: Number, default: 0 },
+  location: {
+    latitude: { type: Number },
+    longitude: { type: Number },
+    address: { type: String, default: '' },
+  },
   status: { type: String, enum: ['present', 'absent', 'half-day'], default: 'present' },
 }, { timestamps: true });
 

@@ -19,6 +19,11 @@ const userSchema = new mongoose.Schema({
   canManageInternships: { type: Boolean, default: false },
   canManageEnquiries: { type: Boolean, default: false },
   canManageLeads: { type: Boolean, default: false },
+  leaveBalance: {
+    casual: { type: Number, default: 12 },
+    sick: { type: Number, default: 6 },
+    earned: { type: Number, default: 15 },
+  },
   status: { type: String, enum: ['joined', 'enquiry', 'rejected'], default: 'enquiry' },
   fcmToken: { type: String, default: '' },
 }, { timestamps: true });

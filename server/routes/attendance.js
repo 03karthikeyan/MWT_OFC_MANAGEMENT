@@ -16,20 +16,26 @@ const getToday = () => {
 router.post('/checkin', auth, async (req, res) => {
   try {
     const today = getToday();
+    const { latitude, longitude, address } = req.body;
     
     let attendance = await Attendance.findOne({ userId: req.user._id, date: today });
     if (attendance && attendance.checkIn) {
       return res.status(400).json({ message: 'Already checked in today' });
     }
 
+    const checkInTime = new Date();
+    const locationData = (latitude && longitude) ? { latitude, longitude, address: address || '' } : undefined;
+
     if (!attendance) {
       attendance = new Attendance({
         userId: req.user._id,
         date: today,
-        checkIn: new Date(),
+        checkIn: checkInTime,
+        location: locationData,
       });
     } else {
-      attendance.checkIn = new Date();
+      attendance.checkIn = checkInTime;
+      if (locationData) attendance.location = locationData;
     }
 
     await attendance.save();
@@ -39,7 +45,7 @@ router.post('/checkin', auth, async (req, res) => {
     sendNotification({
       recipientId: req.user._id,
       title: '⏰ Check-In Successful',
-      message: `You checked in at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Have a great day!`,
+      message: `You checked in at ${checkInTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Have a great day!`,
       data: { type: 'attendance' },
     });
 
@@ -62,7 +68,14 @@ router.post('/checkout', auth, async (req, res) => {
       return res.status(400).json({ message: 'Already checked out today' });
     }
 
-    attendance.checkOut = new Date();
+    const checkOutTime = new Date();
+    attendance.checkOut = checkOutTime;
+
+    // Calculate work hours
+    const diffMs = checkOutTime - new Date(attendance.checkIn);
+    const hoursWorked = parseFloat((diffMs / (1000 * 60 * 60)).toFixed(2));
+    attendance.workHours = hoursWorked;
+
     await attendance.save();
     getIO().to(req.user._id.toString()).emit('attendance:update', attendance);
 
@@ -70,7 +83,7 @@ router.post('/checkout', auth, async (req, res) => {
     sendNotification({
       recipientId: req.user._id,
       title: '👋 Check-Out Successful',
-      message: `You checked out at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Have a relaxing evening!`,
+      message: `You checked out at ${checkOutTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Total: ${hoursWorked} hrs.`,
       data: { type: 'attendance' },
     });
 

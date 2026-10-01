@@ -62,7 +62,30 @@ class AdminMorePage extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // Links List
+            _buildLinkItem(
+              context,
+              icon: Icons.analytics_outlined,
+              label: 'HR Reports & Muster Roll',
+              onTap: () => context.push('/admin/reports'),
+            ),
+            _buildLinkItem(
+              context,
+              icon: Icons.add_task_outlined,
+              label: 'Task Delegation & Tracking',
+              onTap: () => context.push('/admin/tasks'),
+            ),
+            _buildLinkItem(
+              context,
+              icon: Icons.receipt_long_outlined,
+              label: 'Expense Claims Review',
+              onTap: () => context.push('/admin/expenses'),
+            ),
+            _buildLinkItem(
+              context,
+              icon: Icons.inventory_2_outlined,
+              label: 'Assets & Hardware Inventory',
+              onTap: () => context.push('/admin/assets'),
+            ),
             _buildLinkItem(
               context,
               icon: Icons.chat_bubble_outline_rounded,

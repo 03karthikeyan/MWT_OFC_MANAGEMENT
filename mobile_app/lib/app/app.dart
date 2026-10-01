@@ -38,6 +38,16 @@ import '../features/leave/presentation/pages/leave_apply_page.dart';
 import '../features/employee_management/presentation/pages/admin_employee_details_page.dart';
 import '../features/employee_management/presentation/pages/admin_employee_edit_page.dart';
 
+// New Features: Tasks, Expenses, Assets, Reports
+import '../features/tasks/presentation/pages/tasks_page.dart';
+import '../features/tasks/bloc/task_cubit.dart';
+import '../features/expenses/presentation/pages/expenses_page.dart';
+import '../features/expenses/bloc/expense_cubit.dart';
+import '../features/assets/presentation/pages/assets_page.dart';
+import '../features/assets/bloc/asset_cubit.dart';
+import '../features/reports/presentation/pages/admin_reports_page.dart';
+import '../features/reports/bloc/report_cubit.dart';
+
 // Import Cubits & Repos
 import '../features/dashboard/bloc/dashboard_cubit.dart';
 import '../features/attendance/bloc/attendance_cubit.dart';
@@ -322,6 +332,30 @@ class _HrmsAppState extends State<HrmsApp> {
           },
         ),
         GoRoute(
+          path: '/tasks',
+          pageBuilder: (context, state) => _buildSmoothPageTransition(
+            context: context,
+            state: state,
+            child: const TasksPage(isAdmin: false),
+          ),
+        ),
+        GoRoute(
+          path: '/expenses',
+          pageBuilder: (context, state) => _buildSmoothPageTransition(
+            context: context,
+            state: state,
+            child: const ExpensesPage(isAdmin: false),
+          ),
+        ),
+        GoRoute(
+          path: '/assets',
+          pageBuilder: (context, state) => _buildSmoothPageTransition(
+            context: context,
+            state: state,
+            child: const AssetsPage(isAdmin: false),
+          ),
+        ),
+        GoRoute(
           path: '/help',
           pageBuilder: (context, state) => _buildSmoothPageTransition(
             context: context,
@@ -474,6 +508,38 @@ class _HrmsAppState extends State<HrmsApp> {
           ),
         ),
         GoRoute(
+          path: '/admin/tasks',
+          pageBuilder: (context, state) => _buildSmoothPageTransition(
+            context: context,
+            state: state,
+            child: const TasksPage(isAdmin: true),
+          ),
+        ),
+        GoRoute(
+          path: '/admin/expenses',
+          pageBuilder: (context, state) => _buildSmoothPageTransition(
+            context: context,
+            state: state,
+            child: const ExpensesPage(isAdmin: true),
+          ),
+        ),
+        GoRoute(
+          path: '/admin/assets',
+          pageBuilder: (context, state) => _buildSmoothPageTransition(
+            context: context,
+            state: state,
+            child: const AssetsPage(isAdmin: true),
+          ),
+        ),
+        GoRoute(
+          path: '/admin/reports',
+          pageBuilder: (context, state) => _buildSmoothPageTransition(
+            context: context,
+            state: state,
+            child: const AdminReportsPage(),
+          ),
+        ),
+        GoRoute(
           path: '/admin/settings',
           pageBuilder: (context, state) => _buildSmoothPageTransition(
             context: context,
@@ -612,6 +678,41 @@ class _HrmsAppState extends State<HrmsApp> {
           }
           break;
 
+        case 'task':
+        case 'tasks':
+          if (isAdmin) {
+            _router.push('/admin/tasks');
+          } else {
+            _router.push('/tasks');
+          }
+          break;
+
+        case 'expense':
+        case 'expenses':
+        case 'expense_status':
+          if (isAdmin) {
+            _router.push('/admin/expenses');
+          } else {
+            _router.push('/expenses');
+          }
+          break;
+
+        case 'asset':
+        case 'assets':
+          if (isAdmin) {
+            _router.push('/admin/assets');
+          } else {
+            _router.push('/assets');
+          }
+          break;
+
+        case 'report':
+        case 'reports':
+          if (isAdmin) {
+            _router.push('/admin/reports');
+          }
+          break;
+
         case 'notification':
         case 'announcement':
         default:
@@ -650,6 +751,10 @@ class _HrmsAppState extends State<HrmsApp> {
         BlocProvider<RequestCubit>(create: (context) => RequestCubit()),
         BlocProvider<NotificationCubit>(create: (context) => NotificationCubit()),
         BlocProvider<ChatCubit>(create: (context) => ChatCubit()),
+        BlocProvider<TaskCubit>(create: (context) => TaskCubit()),
+        BlocProvider<ExpenseCubit>(create: (context) => ExpenseCubit()),
+        BlocProvider<AssetCubit>(create: (context) => AssetCubit()),
+        BlocProvider<ReportCubit>(create: (context) => ReportCubit()),
       ],
       child: MaterialApp.router(
         title: 'Media Wave HRMS',

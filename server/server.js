@@ -60,6 +60,10 @@ app.use('/api/onduty', require('./routes/onduty'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/holidays', require('./routes/holidays'));
 app.use('/api/chat', require('./routes/chat'));
+app.use('/api/tasks', require('./routes/tasks'));
+app.use('/api/expenses', require('./routes/expenses'));
+app.use('/api/assets', require('./routes/assets'));
+app.use('/api/reports', require('./routes/reports'));
 
 // Health check
 app.get('/api/health', (req, res) => {
