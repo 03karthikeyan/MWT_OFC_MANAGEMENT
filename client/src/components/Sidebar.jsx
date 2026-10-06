@@ -198,15 +198,18 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
   ];
 
   return (
-    <aside className={`w-64 bg-white border-r border-slate-200 h-screen fixed left-0 top-0 flex flex-col shadow-sm select-none z-[70] transition-transform duration-300 lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-      <div className="p-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center w-full">
-            <div className="w-full h-16 overflow-hidden flex items-center">
-              <img src={logo} alt="MediaWave Logo" className="w-full h-16 object-contain object-left" />
-            </div>
-          </div>
+    <aside className={`w-64 bg-white border-r border-slate-200 h-screen fixed left-0 top-0 flex flex-col shadow-xl lg:shadow-sm select-none z-[70] transition-transform duration-300 ease-out lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <div className="p-5 pb-4 border-b border-slate-100 flex items-center justify-between">
+        <div className="w-full h-12 overflow-hidden flex items-center">
+          <img src={logo} alt="MediaWave Logo" className="h-full object-contain object-left" />
         </div>
+        <button
+          onClick={() => setIsOpen && setIsOpen(false)}
+          className="lg:hidden p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors ml-2"
+          aria-label="Close Sidebar"
+        >
+          <HiOutlineXMark className="w-5 h-5" />
+        </button>
       </div>
 
       <nav className="flex-1 px-4 space-y-4 mt-2 overflow-y-auto custom-scrollbar">

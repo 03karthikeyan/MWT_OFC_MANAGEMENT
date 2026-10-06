@@ -14,13 +14,15 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: 'https://mwt-ofc-management.onrender.com',
         changeOrigin: true,
+        secure: false,
       },
       '/socket.io': {
-        target: 'http://localhost:5000',
+        target: 'https://mwt-ofc-management.onrender.com',
         ws: true,
         changeOrigin: true,
+        secure: false,
       }
     }
   }

@@ -6,11 +6,11 @@ const getSocketUrl = () => {
   }
   if (typeof window !== 'undefined') {
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      return 'http://localhost:5000';
+      return 'https://mwt-ofc-management.onrender.com';
     }
     return window.location.origin;
   }
-  return 'http://localhost:5000';
+  return 'https://mwt-ofc-management.onrender.com';
 };
 
 export const socket = io(getSocketUrl(), {
