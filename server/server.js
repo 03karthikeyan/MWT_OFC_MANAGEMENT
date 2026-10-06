@@ -21,9 +21,17 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // Connect MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/workpulse')
-  .then(async () => {
+let isConnected = false;
+const connectDB = async () => {
+  if (isConnected || mongoose.connection.readyState >= 1) {
+    isConnected = true;
+    return;
+  }
+  try {
+    const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/workpulse');
+    isConnected = !!conn.connections[0].readyState;
     console.log('✅ MongoDB connected');
+
     // Create default admin if not exists
     const User = require('./models/User');
     const bcrypt = require('bcryptjs');
@@ -39,8 +47,21 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/workpulse
       });
       console.log('✅ Default admin created (admin / admin123)');
     }
-  })
-  .catch(err => console.error('❌ MongoDB connection error:', err));
+  } catch (err) {
+    console.error('❌ MongoDB connection error:', err);
+  }
+};
+
+// Serverless DB connect middleware
+app.use(async (req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    await connectDB();
+  }
+  next();
+});
+
+// Initial connect
+connectDB();
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
@@ -90,15 +111,12 @@ app.get('/api/download/apk', (req, res) => {
 });
 
 
-const PORT = process.env.PORT;
-// if (process.env.NODE_ENV !== 'production') {
-//   server.listen(PORT, () => {
-//     console.log(`🚀 Server running on port ${PORT}`);
-//   });
-    // }(
+const PORT = process.env.PORT || 5000;
 
-    server.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-    });
+if (!process.env.VERCEL && process.env.NODE_ENV !== 'test') {
+  server.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+  });
+}
 
-module.exports = server;
+module.exports = app;
