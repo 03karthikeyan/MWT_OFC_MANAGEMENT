@@ -30,12 +30,17 @@ export const getMyPayslips = () => API.get('/auth/mypayslips');
 export const updateProfile = (data) => API.put('/auth/profile', data);
 
 // Attendance
-export const checkIn = () => API.post('/attendance/checkin');
-export const checkOut = () => API.post('/attendance/checkout');
+export const checkIn = (data) => API.post('/attendance/checkin', data);
+export const checkOut = (data) => API.post('/attendance/checkout', data);
 export const getMyAttendance = (params) => API.get('/attendance/my', { params });
 export const getAllAttendance = (params) => API.get('/attendance/all', { params });
 export const getTodayAttendance = () => API.get('/attendance/today');
 export const getAttendanceSummary = (params) => API.get('/attendance/summary', { params });
+export const getEmployeeSummary = (userId, params) => API.get(`/attendance/employee-summary/${userId}`, { params });
+export const manualCheckout = (id, data) => API.put(`/attendance/manual-checkout/${id}`, data);
+export const adminRegularizeAttendance = (data) => API.post('/attendance/admin-regularize', data);
+export const remindCheckIn = () => API.post('/attendance/remind-checkin');
+export const remindCheckOut = () => API.post('/attendance/remind-checkout');
 
 // Work Updates
 export const addWork = (data) => API.post('/work', data);
@@ -124,5 +129,41 @@ export const deleteLead = (id) => API.delete(`/leads/${id}`);
 export const getHolidays = () => API.get('/holidays');
 export const addHoliday = (data) => API.post('/holidays', data);
 export const deleteHoliday = (id) => API.delete(`/holidays/${id}`);
+
+// Leave Balances
+export const getLeaveBalances = () => API.get('/leave/balances');
+export const getUserLeaveBalances = (userId) => API.get(`/leave/balances/${userId}`);
+
+// Tasks & Project Milestones
+export const getMyTasks = () => API.get('/tasks/my');
+export const getAllTasks = () => API.get('/tasks/all');
+export const addTask = (data) => API.post('/tasks', data);
+export const updateTaskStatus = (id, data) => API.put(`/tasks/${id}/status`, data);
+export const addTaskComment = (id, data) => API.post(`/tasks/${id}/comments`, data);
+export const deleteTask = (id) => API.delete(`/tasks/${id}`);
+
+// Expenses & Claims
+export const getMyExpenses = () => API.get('/expenses/my');
+export const getAllExpenses = () => API.get('/expenses/all');
+export const addExpense = (data) => API.post('/expenses', data);
+export const updateExpenseStatus = (id, data) => API.put(`/expenses/${id}/status`, data);
+export const deleteExpense = (id) => API.delete(`/expenses/${id}`);
+
+// Hardware & Assets
+export const getMyAssets = () => API.get('/assets/my');
+export const getAllAssets = () => API.get('/assets/all');
+export const addAsset = (data) => API.post('/assets', data);
+export const allocateAsset = (id, data) => API.put(`/assets/${id}/allocate`, data);
+export const deleteAsset = (id) => API.delete(`/assets/${id}`);
+
+// Reports & Muster Roll
+export const getMusterRollReport = (params) => API.get('/reports/muster-roll', { params });
+export const getSummaryOverviewReport = (params) => API.get('/reports/summary-overview', { params });
+
+// Internal Chat & Direct Messaging
+export const getChatUsers = () => API.get('/chat/users');
+export const getChatHistory = (userId) => API.get(`/chat/messages/${userId}`);
+export const sendChatMessage = (data) => API.post('/chat/messages', data);
+export const markChatRead = (userId) => API.put(`/chat/read/${userId}`);
 
 export default API;

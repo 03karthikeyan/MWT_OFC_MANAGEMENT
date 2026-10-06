@@ -70,6 +70,26 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
 });
 
+// APK Download Endpoint
+const path = require('path');
+const fs = require('fs');
+app.get('/api/download/apk', (req, res) => {
+  const apkPath = path.join(__dirname, '../client/public/MediaWave-v1.0.0.apk');
+  const fallbackPath = path.join(__dirname, '../mobile_app/build/app/outputs/flutter-apk/app-debug.apk');
+  if (fs.existsSync(apkPath)) {
+    res.setHeader('Content-Disposition', 'attachment; filename="MediaWave-Technologies-v1.0.0.apk"');
+    res.setHeader('Content-Type', 'application/vnd.android.package-archive');
+    return res.download(apkPath, 'MediaWave-Technologies-v1.0.0.apk');
+  } else if (fs.existsSync(fallbackPath)) {
+    res.setHeader('Content-Disposition', 'attachment; filename="MediaWave-Technologies-v1.0.0.apk"');
+    res.setHeader('Content-Type', 'application/vnd.android.package-archive');
+    return res.download(fallbackPath, 'MediaWave-Technologies-v1.0.0.apk');
+  } else {
+    return res.status(404).json({ message: 'APK build file not found' });
+  }
+});
+
+
 const PORT = process.env.PORT;
 // if (process.env.NODE_ENV !== 'production') {
 //   server.listen(PORT, () => {

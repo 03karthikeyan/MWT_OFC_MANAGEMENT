@@ -3,22 +3,70 @@ const Attendance = require('../models/Attendance');
 const { auth, adminAuth } = require('../middleware/auth');
 const { getIO } = require('../socket');
 const Holiday = require('../models/Holiday');
-
 const { sendNotification } = require('../services/pushNotification');
 
-// Get today's date (start of day)
-const getToday = () => {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+// Get timezone-safe date window (handles UTC, IST, local server dates)
+const getDayRange = (dateInput) => {
+  let y, m, d;
+  if (!dateInput) {
+    const now = new Date();
+    y = now.getFullYear();
+    m = now.getMonth();
+    d = now.getDate();
+  } else if (typeof dateInput === 'string' && dateInput.includes('-')) {
+    const parts = dateInput.split('T')[0].split('-');
+    y = parseInt(parts[0], 10);
+    m = parseInt(parts[1], 10) - 1;
+    d = parseInt(parts[2], 10);
+  } else {
+    const dt = new Date(dateInput);
+    y = dt.getFullYear();
+    m = dt.getMonth();
+    d = dt.getDate();
+  }
+
+  const startUtc = new Date(Date.UTC(y, m, d, 0, 0, 0, 0));
+  const endUtc = new Date(Date.UTC(y, m, d, 23, 59, 59, 999));
+  const startLocal = new Date(y, m, d, 0, 0, 0, 0);
+  const endLocal = new Date(y, m, d, 23, 59, 59, 999);
+
+  const windowStart = new Date(Math.min(startUtc.getTime(), startLocal.getTime()) - 12 * 3600 * 1000);
+  const windowEnd = new Date(Math.max(endUtc.getTime(), endLocal.getTime()) + 12 * 3600 * 1000);
+
+  return {
+    windowStart,
+    windowEnd,
+    canonicalDate: startUtc,
+    y, m, d
+  };
+};
+
+const getDayFilter = (dateInput, extra = {}) => {
+  const { windowStart, windowEnd } = getDayRange(dateInput);
+  return {
+    ...extra,
+    $or: [
+      { date: { $gte: windowStart, $lte: windowEnd } },
+      { checkIn: { $gte: windowStart, $lte: windowEnd } },
+      { createdAt: { $gte: windowStart, $lte: windowEnd } },
+    ]
+  };
 };
 
 // Check In
 router.post('/checkin', auth, async (req, res) => {
   try {
-    const today = getToday();
+    const { canonicalDate, windowStart, windowEnd } = getDayRange();
     const { latitude, longitude, address } = req.body;
     
-    let attendance = await Attendance.findOne({ userId: req.user._id, date: today });
+    let attendance = await Attendance.findOne({
+      userId: req.user._id,
+      $or: [
+        { date: { $gte: windowStart, $lte: windowEnd } },
+        { checkIn: { $gte: windowStart, $lte: windowEnd } }
+      ]
+    }).sort({ checkIn: -1 });
+
     if (attendance && attendance.checkIn) {
       return res.status(400).json({ message: 'Already checked in today' });
     }
@@ -29,12 +77,14 @@ router.post('/checkin', auth, async (req, res) => {
     if (!attendance) {
       attendance = new Attendance({
         userId: req.user._id,
-        date: today,
+        date: canonicalDate,
         checkIn: checkInTime,
         location: locationData,
+        status: 'present'
       });
     } else {
       attendance.checkIn = checkInTime;
+      attendance.status = 'present';
       if (locationData) attendance.location = locationData;
     }
 
@@ -58,9 +108,16 @@ router.post('/checkin', auth, async (req, res) => {
 // Check Out
 router.post('/checkout', auth, async (req, res) => {
   try {
-    const today = getToday();
+    const { windowStart, windowEnd } = getDayRange();
     
-    const attendance = await Attendance.findOne({ userId: req.user._id, date: today });
+    const attendance = await Attendance.findOne({
+      userId: req.user._id,
+      $or: [
+        { date: { $gte: windowStart, $lte: windowEnd } },
+        { checkIn: { $gte: windowStart, $lte: windowEnd } }
+      ]
+    }).sort({ checkIn: -1 });
+
     if (!attendance || !attendance.checkIn) {
       return res.status(400).json({ message: 'You need to check in first' });
     }
@@ -124,8 +181,14 @@ router.post('/remind-checkout', adminAuth, async (req, res) => {
 // Get today's attendance
 router.get('/today', auth, async (req, res) => {
   try {
-    const today = getToday();
-    const attendance = await Attendance.findOne({ userId: req.user._id, date: today });
+    const { windowStart, windowEnd } = getDayRange();
+    const attendance = await Attendance.findOne({
+      userId: req.user._id,
+      $or: [
+        { date: { $gte: windowStart, $lte: windowEnd } },
+        { checkIn: { $gte: windowStart, $lte: windowEnd } }
+      ]
+    }).sort({ checkIn: -1 });
     res.json({ attendance });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
@@ -150,11 +213,11 @@ router.get('/my', auth, async (req, res) => {
     }
 
     const attendance = await Attendance.find(query)
-      .sort({ date: -1 })
+      .sort({ date: -1, checkIn: -1 })
       .limit(limit);
     res.json({ attendance });
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -162,20 +225,35 @@ router.get('/my', auth, async (req, res) => {
 router.get('/all', adminAuth, async (req, res) => {
   try {
     let query = {};
-    if (req.query.date) {
-      const date = new Date(req.query.date);
-      query.date = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    } else if (req.query.today) {
-      query.date = getToday();
+    if (req.query.date || req.query.today) {
+      query = getDayFilter(req.query.date || null);
     }
 
-    const attendance = await Attendance.find(query)
+    const rawAttendance = await Attendance.find(query)
       .populate('userId', 'name username email employeeId role jobRole profilePicture')
-      .sort({ date: -1, checkIn: -1 })
+      .sort({ checkIn: -1, date: -1 })
       .lean();
+
+    // Deduplicate by userId for target date so each employee has one consolidated daily record
+    const userMap = new Map();
+    rawAttendance.forEach((item) => {
+      const uId = item.userId?._id ? item.userId._id.toString() : (item.userId ? item.userId.toString() : null);
+      if (!uId) return;
+
+      if (!userMap.has(uId)) {
+        userMap.set(uId, item);
+      } else {
+        const existing = userMap.get(uId);
+        if ((!existing.checkIn && item.checkIn) || (!existing.checkOut && item.checkOut) || (item.workHours > existing.workHours)) {
+          userMap.set(uId, { ...existing, ...item });
+        }
+      }
+    });
+
+    const attendance = Array.from(userMap.values());
     res.json({ attendance });
   } catch (err) {
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
 
@@ -231,14 +309,20 @@ router.post('/admin-regularize', adminAuth, async (req, res) => {
       return res.status(400).json({ message: 'User ID and Date are required' });
     }
 
-    const targetDate = new Date(date);
-    const dayStart = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+    const { canonicalDate, windowStart, windowEnd } = getDayRange(date);
 
-    let attendance = await Attendance.findOne({ userId, date: dayStart });
+    let attendance = await Attendance.findOne({
+      userId,
+      $or: [
+        { date: { $gte: windowStart, $lte: windowEnd } },
+        { checkIn: { $gte: windowStart, $lte: windowEnd } }
+      ]
+    });
+
     if (!attendance) {
       attendance = new Attendance({
         userId,
-        date: dayStart,
+        date: canonicalDate,
       });
     }
 
@@ -303,7 +387,6 @@ router.get('/summary', auth, async (req, res) => {
       }).sort({ date: 1 }).lean(),
     ]);
 
-    // Process attendance with Half-Day rule for un-checked-out past records
     let presentDays = 0;
     let halfDays = 0;
     let absentDays = 0;
@@ -314,7 +397,6 @@ router.get('/summary', auth, async (req, res) => {
       const attDate = new Date(att.date);
       const isPastDay = attDate < new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-      // If checked in but NO check out and not manually regularized, treat as Half-Day
       let effectiveStatus = att.status;
       let effectiveHours = att.workHours || 0;
 
@@ -344,7 +426,6 @@ router.get('/summary', auth, async (req, res) => {
       };
     });
 
-    // Check approved OnDuty records that count as Present
     onDutyList.forEach((od) => {
       if (od.status === 'approved') {
         const odDate = new Date(od.date);
@@ -394,7 +475,7 @@ router.get('/summary', auth, async (req, res) => {
   }
 });
 
-// Detailed Employee Attendance & Leaves Summary (for Employee Details screen in Admin Directory)
+// Detailed Employee Attendance & Leaves Summary
 router.get('/employee-summary/:userId', auth, async (req, res) => {
   try {
     const { userId } = req.params;
@@ -442,7 +523,6 @@ router.get('/employee-summary/:userId', auth, async (req, res) => {
       }).sort({ date: -1 }).lean(),
     ]);
 
-    // Process attendance with Half-Day rule for un-checked-out past records
     let presentDays = 0;
     let halfDays = 0;
     let absentDays = 0;
@@ -453,7 +533,6 @@ router.get('/employee-summary/:userId', auth, async (req, res) => {
       const attDate = new Date(att.date);
       const isPastDay = attDate < new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-      // If checked in but NO check out and not manually regularized, treat as Half-Day
       let effectiveStatus = att.status;
       let effectiveHours = att.workHours || 0;
 
@@ -483,7 +562,6 @@ router.get('/employee-summary/:userId', auth, async (req, res) => {
       };
     });
 
-    // Check approved OnDuty records that count as Present
     onDutyList.forEach((od) => {
       if (od.status === 'approved') {
         const odDate = new Date(od.date);
@@ -499,7 +577,6 @@ router.get('/employee-summary/:userId', auth, async (req, res) => {
       }
     });
 
-    // Calculate absent days up to today
     const maxDaysToCount = (now.getFullYear() === targetYear && now.getMonth() === targetMonth)
       ? now.getDate()
       : totalDaysInMonth;
@@ -535,4 +612,3 @@ router.get('/employee-summary/:userId', auth, async (req, res) => {
 });
 
 module.exports = router;
-

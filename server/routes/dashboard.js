@@ -9,19 +9,61 @@ const Request = require('../models/Request');
 const OnDuty = require('../models/OnDuty');
 const Internship = require('../models/Internship');
 
-// Helper: get start of today
-const getToday = () => {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+// Helper: Get timezone-safe date window (handles UTC, IST, local server dates)
+const getDayRange = (dateInput) => {
+  let y, m, d;
+  if (!dateInput) {
+    const now = new Date();
+    y = now.getFullYear();
+    m = now.getMonth();
+    d = now.getDate();
+  } else if (typeof dateInput === 'string' && dateInput.includes('-')) {
+    const parts = dateInput.split('T')[0].split('-');
+    y = parseInt(parts[0], 10);
+    m = parseInt(parts[1], 10) - 1;
+    d = parseInt(parts[2], 10);
+  } else {
+    const dt = new Date(dateInput);
+    y = dt.getFullYear();
+    m = dt.getMonth();
+    d = dt.getDate();
+  }
+
+  const startUtc = new Date(Date.UTC(y, m, d, 0, 0, 0, 0));
+  const endUtc = new Date(Date.UTC(y, m, d, 23, 59, 59, 999));
+  const startLocal = new Date(y, m, d, 0, 0, 0, 0);
+  const endLocal = new Date(y, m, d, 23, 59, 59, 999);
+
+  const windowStart = new Date(Math.min(startUtc.getTime(), startLocal.getTime()) - 12 * 3600 * 1000);
+  const windowEnd = new Date(Math.max(endUtc.getTime(), endLocal.getTime()) + 12 * 3600 * 1000);
+
+  return {
+    windowStart,
+    windowEnd,
+    canonicalDate: startUtc,
+    y, m, d
+  };
 };
 
-// NEW: Ultra-fast stats only route for instant page load
+const getDayFilter = (dateInput, extra = {}) => {
+  const { windowStart, windowEnd } = getDayRange(dateInput);
+  return {
+    ...extra,
+    $or: [
+      { date: { $gte: windowStart, $lte: windowEnd } },
+      { checkIn: { $gte: windowStart, $lte: windowEnd } },
+      { createdAt: { $gte: windowStart, $lte: windowEnd } },
+    ]
+  };
+};
+
+// Fast stats only route
 router.get('/stats', adminAuth, async (req, res) => {
   try {
-    const today = getToday();
-    const [userCount, attendanceCount, onDutyCount, internshipStats] = await Promise.all([
+    const dayFilter = getDayFilter();
+    const [userCount, attendanceRecords, onDutyCount, internshipStats] = await Promise.all([
       User.countDocuments(),
-      Attendance.countDocuments({ date: today }),
+      Attendance.find(dayFilter).select('userId checkIn').lean(),
       OnDuty.countDocuments({ status: 'pending' }),
       (async () => {
         try {
@@ -40,13 +82,19 @@ router.get('/stats', adminAuth, async (req, res) => {
       })()
     ]);
 
+    const uniquePresentUsers = new Set(
+      attendanceRecords
+        .map((a) => (a.userId ? a.userId.toString() : null))
+        .filter(Boolean)
+    );
+
     res.json({
-        totalUsers: userCount,
-        presentToday: attendanceCount,
-        pendingOnDuty: onDutyCount,
-        activeInterns: internshipStats.active,
-        totalInvoiced: internshipStats.totalInvoiced,
-        totalCollected: internshipStats.totalCollected
+      totalUsers: userCount,
+      presentToday: uniquePresentUsers.size,
+      pendingOnDuty: onDutyCount,
+      activeInterns: internshipStats.active,
+      totalInvoiced: internshipStats.totalInvoiced,
+      totalCollected: internshipStats.totalCollected
     });
   } catch (err) {
     res.status(500).json({ message: 'Stats error' });
@@ -56,20 +104,19 @@ router.get('/stats', adminAuth, async (req, res) => {
 // Optimized list data route
 router.get('/admin', adminAuth, async (req, res) => {
   try {
-    const today = getToday();
+    const dayFilter = getDayFilter();
     const now = new Date();
 
     const [
-      allAttendance,
+      rawAttendance,
       recentWork,
       recentLeaves,
       notifications,
       recentRequests
     ] = await Promise.all([
-      Attendance.find({ date: today })
-        .populate('userId', 'name jobRole profilePicture employeeId')
-        .sort({ checkIn: -1 })
-        .limit(15)
+      Attendance.find(dayFilter)
+        .populate('userId', 'name jobRole profilePicture employeeId role')
+        .sort({ checkIn: -1, date: -1 })
         .lean(),
       
       WorkUpdate.find()
@@ -104,6 +151,17 @@ router.get('/admin', adminAuth, async (req, res) => {
           .lean();
       })()
     ]);
+
+    // Deduplicate attendance by userId
+    const userMap = new Map();
+    rawAttendance.forEach((item) => {
+      const uId = item.userId?._id ? item.userId._id.toString() : null;
+      if (uId && !userMap.has(uId)) {
+        userMap.set(uId, item);
+      }
+    });
+
+    const allAttendance = Array.from(userMap.values());
 
     res.json({
       allAttendance,

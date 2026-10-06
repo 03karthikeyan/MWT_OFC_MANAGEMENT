@@ -34,13 +34,22 @@ const Enquiries = lazy(() => import('./pages/Enquiries'));
 const Leads = lazy(() => import('./pages/Leads'));
 const AdminInternEnquiries = lazy(() => import('./pages/admin/AdminInternEnquiries'));
 
+// Synchronized modules with Mobile App & Backend APIs
+const Chat = lazy(() => import('./pages/Chat'));
+const Tasks = lazy(() => import('./pages/Tasks'));
+const Expenses = lazy(() => import('./pages/Expenses'));
+const Assets = lazy(() => import('./pages/Assets'));
+const Holidays = lazy(() => import('./pages/Holidays'));
+const Reports = lazy(() => import('./pages/Reports'));
+
 // Background Prefetcher
 const Prefetcher = () => {
   useEffect(() => {
-    // Prefetch main dashboards 2 seconds after mount to not interfere with initial load
     const timer = setTimeout(() => {
       import('./pages/admin/AdminDashboard');
       import('./pages/UserDashboard');
+      import('./pages/Chat');
+      import('./pages/Tasks');
       import('./components/Layout');
     }, 2000);
     return () => clearTimeout(timer);
@@ -57,9 +66,9 @@ const PageLoader = () => (
 
 const HomeRedirect = () => {
   const { user, loading } = useAuth();
-  if (loading) return null;
-  if (!user) return <Navigate to="/login" />;
-  return user.role === 'admin' ? <Navigate to="/admin" /> : <Navigate to="/dashboard" />;
+  if (loading) return <PageLoader />;
+  if (!user) return <Navigate to="/login" replace />;
+  return user.role === 'admin' ? <Navigate to="/admin" replace /> : <Navigate to="/dashboard" replace />;
 };
 
 function App() {
@@ -85,14 +94,20 @@ function App() {
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/" element={<HomeRedirect />} />
+            <Route path="/landing" element={<HomeRedirect />} />
+            <Route path="/download" element={<HomeRedirect />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/internship-enquiry" element={<InternshipEnquiry />} />
             
-            {/* User Routes */}
+            {/* Authenticated Workspace Routes */}
             <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route path="/dashboard" element={<UserDashboard />} />
-              <Route path="/internship-form" element={<InternshipEnquiry sidebarMode />} />
+              <Route path="/chat" element={<Chat />} />
+              <Route path="/tasks" element={<Tasks />} />
+              <Route path="/expenses" element={<Expenses />} />
+              <Route path="/assets" element={<Assets />} />
+              <Route path="/holidays" element={<Holidays />} />
               <Route path="/work-updates" element={<WorkUpdates />} />
               <Route path="/attendance" element={<Attendance />} />
               <Route path="/leaves" element={<Leaves />} />
@@ -103,13 +118,14 @@ function App() {
               <Route path="/active-projects" element={<ActiveProjects />} />
               <Route path="/portfolios" element={<Portfolios />} />
               <Route path="/requests" element={<Requests />} />
+              <Route path="/internship-form" element={<InternshipEnquiry sidebarMode />} />
               <Route path="/internships" element={<AdminInternships />} />
               <Route path="/admin/internship-enquiries" element={<AdminInternEnquiries />} />
               <Route path="/enquiries" element={<Enquiries />} />
               <Route path="/leads" element={<Leads />} />
             </Route>
 
-            {/* Admin Routes */}
+            {/* Admin Only Routes */}
             <Route element={<ProtectedRoute adminOnly><Layout /></ProtectedRoute>}>
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/members" element={<Members />} />
@@ -121,11 +137,11 @@ function App() {
               <Route path="/admin/payroll" element={<AdminPayslips />} />
               <Route path="/admin/requests" element={<Requests />} />
               <Route path="/admin/internships" element={<AdminInternships />} />
-              <Route path="/enquiries" element={<Enquiries />} />
-              <Route path="/leads" element={<Leads />} />
+              <Route path="/admin/reports" element={<Reports />} />
+              <Route path="/reports" element={<Reports />} />
             </Route>
 
-            <Route path="*" element={<Navigate to="/" />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
       </Router>

@@ -20,6 +20,12 @@ import {
   HiOutlineBell,
   HiOutlineXMark,
   HiOutlineBriefcase,
+  HiOutlineChatBubbleLeftRight,
+  HiOutlineCheckBadge,
+  HiOutlineReceiptPercent,
+  HiOutlineComputerDesktop,
+  HiOutlineDocumentChartBar,
+  HiOutlineSparkles,
 } from 'react-icons/hi2';
 import logo from '../assets/logo.png';
 
@@ -27,7 +33,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [openSection, setOpenSection] = useState(null);
+  const [openSection, setOpenSection] = useState('office');
   const [pendingLeaves, setPendingLeaves] = useState(0);
   const [pendingOnDuty, setPendingOnDuty] = useState(0);
   const [pendingRequests, setPendingRequests] = useState(0);
@@ -42,17 +48,17 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
           const { getPendingLeavesCount, getPendingOnDutyCount } = await import('@/services/api');
           const [leavesRes, onDutyRes] = await Promise.all([
             getPendingLeavesCount(),
-            getPendingOnDutyCount()
+            getPendingOnDutyCount(),
           ]);
-          setPendingLeaves(leavesRes.data.count);
-          setPendingOnDuty(onDutyRes.data.count);
+          setPendingLeaves(leavesRes.data.count || 0);
+          setPendingOnDuty(onDutyRes.data.count || 0);
         } catch (err) {
           console.error('Failed to fetch pending counts');
         }
       };
-      
+
       fetchPendingCounts();
-      const interval = setInterval(fetchPendingCounts, 30000); // Check every 30s
+      const interval = setInterval(fetchPendingCounts, 30000);
       return () => clearInterval(interval);
     }
   }, [user]);
@@ -70,7 +76,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
           console.error('Failed to fetch notifications');
         }
       };
-      
+
       fetchNotifs();
       const interval = setInterval(fetchNotifs, 30000);
       return () => clearInterval(interval);
@@ -83,33 +89,29 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         try {
           const { getPendingRequestsCount } = await import('@/services/api');
           const res = await getPendingRequestsCount();
-          setPendingRequests(res.data.count);
+          setPendingRequests(res.data.count || 0);
         } catch (err) {
           console.error('Failed to fetch requests count');
         }
       };
-      
+
       fetchReqsCount();
       const interval = setInterval(fetchReqsCount, 30000);
       return () => clearInterval(interval);
     }
   }, [user]);
 
-  // Sound and Total Count Notification Effect
   const prevTotalRef = useRef(0);
   const totalNotifications = pendingLeaves + pendingRequests + unreadNotifs;
 
   useEffect(() => {
     if (totalNotifications > prevTotalRef.current && prevTotalRef.current !== 0) {
-      // Play a clean, professional ping sound
       try {
         const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
         audio.volume = 0.5;
         const playPromise = audio.play();
         if (playPromise !== undefined) {
-          playPromise.catch(() => {
-            // Autoplay blocked: This is expected in many browsers until user interacts
-          });
+          playPromise.catch(() => {});
         }
       } catch (e) {}
     }
@@ -146,18 +148,24 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
       label: 'Office Workspace',
       icon: HiOutlineBuildingOffice2,
       items: [
+        { name: 'Team Chat', icon: HiOutlineChatBubbleLeftRight, path: '/chat', badge: 'LIVE' },
+        { name: 'Tasks & Sprints', icon: HiOutlineCheckBadge, path: '/tasks' },
         { name: 'Work Journal', icon: HiOutlineClipboardDocumentList, path: user?.role === 'admin' ? '/admin/work-updates' : '/work-updates' },
-        { name: 'Time Logs & Leave Calendar', icon: HiOutlineCalendarDays, path: user?.role === 'admin' ? '/admin/attendance' : '/attendance' },
+        { name: 'Attendance & Logs', icon: HiOutlineCalendarDays, path: user?.role === 'admin' ? '/admin/attendance' : '/attendance' },
         { name: 'Leave & Time Off', icon: HiOutlineClock, path: user?.role === 'admin' ? '/admin/leaves' : '/leaves' },
         { name: 'On Duty Register', icon: HiOutlineBriefcase, path: user?.role === 'admin' ? '/admin/on-duty' : '/on-duty' },
+        { name: 'Expenses & Claims', icon: HiOutlineReceiptPercent, path: '/expenses' },
+        { name: 'Hardware & Assets', icon: HiOutlineComputerDesktop, path: '/assets' },
+        { name: 'Company Holidays', icon: HiOutlineSparkles, path: '/holidays' },
         { name: 'My Payslips', icon: HiOutlineDocumentText, path: '/payslips', hideAdmin: true },
-        { name: 'Team', icon: HiOutlineUsers, path: '/team' },
+        { name: 'Team Directory', icon: HiOutlineUsers, path: '/team' },
         { name: 'Announcements', icon: HiOutlineMegaphone, path: '/admin/announcements', adminOnly: true },
         { name: 'Requests & Reviews', icon: HiOutlineClipboardDocumentList, path: user?.role === 'admin' ? '/admin/requests' : '/requests' },
         { name: 'Manage Members', icon: HiOutlineUsers, path: '/admin/members', adminOnly: true },
         { name: 'Payroll Central', icon: HiOutlineCalculator, path: '/admin/payroll', adminOnly: true },
+        { name: 'Muster Roll & Reports', icon: HiOutlineDocumentChartBar, path: '/admin/reports', adminOnly: true },
         { name: 'My Profile', icon: HiOutlineUserCircle, path: '/profile' },
-      ]
+      ],
     },
     {
       id: 'internship',
@@ -167,7 +175,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         { name: 'Intern Dashboard', icon: HiOutlineUsers, path: user?.role === 'admin' ? '/admin/internships' : '/internships', internshipOnly: true },
         { name: 'Enquiry Details', icon: HiOutlineDocumentText, path: '/admin/internship-enquiries', internshipOnly: true },
         { name: 'Enquiry Form', icon: HiOutlineClipboardDocumentList, path: '/internship-form' },
-      ]
+      ],
     },
     {
       id: 'client',
@@ -176,7 +184,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
       items: [
         { name: 'Active Projects', icon: HiOutlineSignal, path: '/active-projects' },
         { name: 'Portfolios', icon: HiOutlineDocumentText, path: '/portfolios' },
-      ]
+      ],
     },
     {
       id: 'enquiry',
@@ -185,8 +193,8 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
       items: [
         { name: 'Enquiries', icon: HiOutlineClipboardDocumentList, path: '/enquiries' },
         { name: 'Leads', icon: HiOutlineDocumentText, path: '/leads' },
-      ]
-    }
+      ],
+    },
   ];
 
   return (
@@ -204,19 +212,19 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
       <nav className="flex-1 px-4 space-y-4 mt-2 overflow-y-auto custom-scrollbar">
         {/* Top Level Dashboard Link */}
         <NavLink
-            to={user?.role === 'admin' ? '/admin' : '/dashboard'}
-            onClick={handleNavClick}
-            className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group relative ${
-                    isActive ? 'bg-indigo-50 text-indigo-600 font-bold shadow-sm border border-indigo-100/50' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
-                }`
-            }
+          to={user?.role === 'admin' ? '/admin' : '/dashboard'}
+          onClick={handleNavClick}
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group relative ${
+              isActive ? 'bg-indigo-50 text-indigo-600 font-bold shadow-sm border border-indigo-100/50' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+            }`
+          }
         >
-            <HiOutlineHome className={`w-5 h-5 ${location.pathname === (user?.role === 'admin' ? '/admin' : '/dashboard') ? 'text-indigo-600' : 'text-slate-400'}`} />
-            <span className="text-[10px] font-black uppercase tracking-[0.15em]">Dashboard View</span>
-            {(pendingLeaves + pendingOnDuty + pendingRequests + unreadNotifs) > 0 && (
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 w-2 h-2 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
-            )}
+          <HiOutlineHome className={`w-5 h-5 ${location.pathname === (user?.role === 'admin' ? '/admin' : '/dashboard') ? 'text-indigo-600' : 'text-slate-400'}`} />
+          <span className="text-[10px] font-black uppercase tracking-[0.15em]">Dashboard View</span>
+          {(pendingLeaves + pendingOnDuty + pendingRequests + unreadNotifs) > 0 && (
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 w-2 h-2 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
+          )}
         </NavLink>
 
         <div className="h-[1px] bg-slate-100 mx-2 my-2" />
@@ -239,12 +247,12 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
             {openSection === section.id && (
               <div className="space-y-1 mt-1 ml-4 pl-3 border-l-2 border-slate-100 fade-in">
                 {section.items
-                  .filter(item => {
+                  .filter((item) => {
                     if (item.adminOnly) return user?.role === 'admin';
                     if (item.internshipOnly) return user?.role === 'admin' || user?.canManageInternships;
                     return true;
                   })
-                  .filter(item => (item.hideAdmin && user?.role === 'admin' ? false : true))
+                  .filter((item) => (item.hideAdmin && user?.role === 'admin' ? false : true))
                   .map((item) => (
                     <NavLink
                       key={item.name}
@@ -253,7 +261,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                       className={({ isActive }) =>
                         `flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 group relative ${
                           isActive && item.path !== '#'
-                            ? 'bg-indigo-50 text-indigo-600 font-bold' 
+                            ? 'bg-indigo-50 text-indigo-600 font-bold'
                             : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
                         }`
                       }
@@ -261,7 +269,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                       <item.icon className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 transition-colors" />
                       <span className="text-[13px]">{item.name}</span>
                       {item.badge && (
-                        <span className="ml-auto text-[7px] font-black uppercase bg-slate-900 text-white px-1.5 py-0.5 rounded tracking-widest shadow-lg shadow-slate-200">
+                        <span className="ml-auto text-[7px] font-black uppercase bg-indigo-600 text-white px-1.5 py-0.5 rounded tracking-widest shadow-sm">
                           {item.badge}
                         </span>
                       )}
@@ -293,17 +301,17 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
               )}
             </div>
             <div className="overflow-hidden">
-                <p className="text-xs font-black text-slate-900 truncate group-hover:text-indigo-600 transition-colors uppercase tracking-tight">{user?.name}</p>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className={`px-1.5 py-0.5 rounded border text-[8px] font-black uppercase tracking-widest ${
-                    jobRoleColors[user?.jobRole] || jobRoleColors.Staff
-                  }`}>
-                    {user?.jobRole || 'Staff'}
-                  </span>
-                </div>
+              <p className="text-xs font-black text-slate-900 truncate group-hover:text-indigo-600 transition-colors uppercase tracking-tight">{user?.name}</p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className={`px-1.5 py-0.5 rounded border text-[8px] font-black uppercase tracking-widest ${
+                  jobRoleColors[user?.jobRole] || jobRoleColors.Staff
+                }`}>
+                  {user?.jobRole || 'Staff'}
+                </span>
+              </div>
             </div>
           </NavLink>
-          
+
           <div className="flex items-center justify-between gap-2 px-2 pb-2 relative">
             {/* Notification Popup Panel */}
             {showNotifPopup && (
@@ -314,12 +322,12 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                     <HiOutlineXMark className="w-4 h-4" />
                   </button>
                 </div>
-                
+
                 <div className="overflow-y-auto custom-scrollbar flex-1">
                   {allNotifs.length === 0 ? (
                     <div className="p-8 text-center bg-slate-50 h-full rounded-[1.5rem] m-2">
-                       <HiOutlineMegaphone className="w-8 h-8 text-slate-200 mx-auto mb-2" />
-                       <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest italic">No active priority broadcasts found</p>
+                      <HiOutlineMegaphone className="w-8 h-8 text-slate-200 mx-auto mb-2" />
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest italic">No active priority broadcasts found</p>
                     </div>
                   ) : (
                     <div className="p-2 space-y-2">
@@ -334,11 +342,11 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                               <HiOutlineMegaphone className="w-3.5 h-3.5" />
                             </div>
                             <div className="min-w-0">
-                               <p className="text-[10px] font-black text-slate-900 truncate uppercase tracking-tighter leading-none mb-1">{notif.title}</p>
-                               <p className="text-[9px] font-medium text-slate-500 leading-tight line-clamp-2">{notif.message}</p>
-                               <p className="text-[7px] font-black text-slate-300 uppercase tracking-widest mt-2">
-                                 {new Date(notif.createdAt).toLocaleDateString()}
-                               </p>
+                              <p className="text-[10px] font-black text-slate-900 truncate uppercase tracking-tighter leading-none mb-1">{notif.title}</p>
+                              <p className="text-[9px] font-medium text-slate-500 leading-tight line-clamp-2">{notif.message}</p>
+                              <p className="text-[7px] font-black text-slate-300 uppercase tracking-widest mt-2">
+                                {new Date(notif.createdAt).toLocaleDateString()}
+                              </p>
                             </div>
                           </div>
                         </div>
@@ -349,7 +357,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
               </div>
             )}
 
-            <div 
+            <div
               onClick={() => setShowNotifPopup(!showNotifPopup)}
               className={`flex-1 flex items-center justify-center rounded-xl py-2 shadow-sm border relative group cursor-pointer transition-all ${
                 showNotifPopup ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-slate-100 hover:bg-indigo-50'
@@ -374,7 +382,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
           </div>
         </div>
         <p className="text-[9px] text-center text-slate-400 font-black uppercase tracking-[0.2em]">
-          MediaWave v1.2.0
+          MediaWave HRMS v1.3.0
         </p>
       </div>
     </aside>
