@@ -149,7 +149,7 @@ const LandingPage = () => {
     }
     if (typeof window !== 'undefined') {
       if (window.location.port === '5174') {
-        return 'http://localhost:5173/login';
+        return 'https://mwt-ofc-management.vercel.app/login';
       }
       return `${window.location.origin}/login`;
     }
@@ -162,7 +162,7 @@ const LandingPage = () => {
     }
     if (typeof window !== 'undefined') {
       if (window.location.port === '5174') {
-        return 'http://localhost:5173/internship-enquiry';
+        return 'https://mwt-ofc-management.vercel.app/enquiries';
       }
       return `${window.location.origin}/internship-enquiry`;
     }
@@ -388,14 +388,6 @@ const LandingPage = () => {
               {activeNav === 'faq' && (
                 <span className="absolute bottom-0 left-0 w-full h-[2.5px] bg-[#0284c7] rounded-full animate-fadeIn"></span>
               )}
-            </a>
-            <a
-              href={internshipUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-[#0284c7] transition-colors py-1 relative"
-            >
-              Internship Portal
             </a>
           </nav>
 
