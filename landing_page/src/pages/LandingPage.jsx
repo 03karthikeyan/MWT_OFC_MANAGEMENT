@@ -147,26 +147,26 @@ const LandingPage = () => {
     if (import.meta.env.VITE_WEB_PORTAL_URL) {
       return import.meta.env.VITE_WEB_PORTAL_URL;
     }
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
       if (window.location.port === '5174') {
-        return 'https://mwt-ofc-management.vercel.app/login';
+        return 'http://localhost:5173/login';
       }
-      return `${window.location.origin}/login`;
+      return 'http://localhost:5173/login';
     }
-    return '/login';
+    return 'https://mwt-ofc-management.vercel.app/login';
   };
 
   const getInternshipUrl = () => {
     if (import.meta.env.VITE_INTERNSHIP_PORTAL_URL) {
       return import.meta.env.VITE_INTERNSHIP_PORTAL_URL;
     }
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
       if (window.location.port === '5174') {
-        return 'https://mwt-ofc-management.vercel.app/enquiries';
+        return 'http://localhost:5173/enquiries';
       }
-      return `${window.location.origin}/internship-enquiry`;
+      return 'http://localhost:5173/enquiries';
     }
-    return '/internship-enquiry';
+    return 'https://mwt-ofc-management.vercel.app/enquiries';
   };
 
   const webPortalUrl = getWebPortalUrl();
